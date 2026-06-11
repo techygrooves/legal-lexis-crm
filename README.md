@@ -1,36 +1,101 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LegalCRM
 
-## Getting Started
+Private case and client management for a solo attorney practice. Built with
+Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, and Supabase.
 
-First, run the development server:
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). You will be redirected to
+`/login` until you sign in (Supabase setup below is required first).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Supabase setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. Create a project
 
-## Learn More
+1. Go to [supabase.com](https://supabase.com) and create a new project.
+2. In the dashboard, open **Project Settings → API Keys**.
+3. Copy the **Project URL** and the **anon (public)** key.
 
-To learn more about Next.js, take a look at the following resources:
+> Never put the `service_role` key in this app or in any `NEXT_PUBLIC_`
+> variable. This project uses only the anon key.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 2. Configure environment variables
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Create `.env.local` in the project root (see `.env.example`):
 
-## Deploy on Vercel
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT-REF.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR-ANON-KEY
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Restart `npm run dev` after changing env vars. On Vercel, add the same two
+variables under **Project Settings → Environment Variables** and redeploy.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 3. Run the database migration
+
+The schema lives in `supabase/migrations/20260611000000_initial_schema.sql`.
+
+Using the dashboard:
+
+1. Open your project in the Supabase dashboard.
+2. Go to **SQL Editor** in the left sidebar.
+3. Click **New query**.
+4. Paste the full contents of the migration file.
+5. Click **Run**.
+6. Verify under **Table Editor** that `clients`, `cases`, `case_events`,
+   `tasks`, `documents`, `notes`, and `contacts` exist.
+
+Or with the Supabase CLI: `supabase db push` after `supabase link`.
+
+> **Note:** Row Level Security is intentionally not enabled yet. Every table
+> already has a `user_id` column so RLS policies can be added in a later
+> migration. Until RLS is in place, do not store real confidential client
+> data in this database.
+
+### 4. Auth settings
+
+Email/password auth is enabled by default in new Supabase projects
+(**Authentication → Sign In / Up → Email**). By default, new sign-ups must
+confirm their email address before they can sign in. For a quicker solo setup
+you can disable **Confirm email** there instead.
+
+Since this CRM is for one attorney, after creating your own account you can
+disable further sign-ups (**Authentication → Sign In / Up → Allow new users
+to sign up**).
+
+### 5. Storage bucket for documents
+
+1. In the dashboard, go to **Storage**.
+2. Click **New bucket**, name it `case-documents`.
+3. Leave it **private** (do not enable "Public bucket").
+
+> **Important:** Real document upload is not wired up yet. Do not upload
+> confidential client documents until RLS and private storage access policies
+> are added in a later step.
+
+## Auth flow
+
+- `/login` — sign in or sign up with email and password.
+- All app pages (`/`, `/clients`, `/cases`, `/cases/new`, `/cases/[id]`,
+  `/calendar`, `/tasks`, `/documents`, `/settings`) require a session.
+- Logged-out visitors are redirected to `/login`; logged-in visitors hitting
+  `/login` are redirected to the dashboard.
+- Session handling: `src/proxy.ts` (Next.js 16 proxy, formerly middleware)
+  refreshes the Supabase session and enforces redirects on every request, and
+  the authenticated layout (`src/app/(app)/layout.tsx`) re-checks the user
+  server-side.
+- Log out with the button at the bottom of the sidebar.
+
+## Project notes
+
+- The UI currently renders mock data from `src/lib/mock-data.ts`; forms are
+  not yet connected to the database.
+- Database types: `src/lib/types/database.ts`.
+- Supabase clients: `src/lib/supabase/client.ts` (browser),
+  `src/lib/supabase/server.ts` (server components), and
+  `src/lib/supabase/proxy.ts` (session refresh helper for the proxy).
