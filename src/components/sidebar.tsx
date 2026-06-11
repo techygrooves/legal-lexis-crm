@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 import {
   Calendar,
   FileText,
   FolderClosed,
   LayoutDashboard,
   ListChecks,
+  LogOut,
   Scale,
   Settings,
   Users,
@@ -15,6 +17,7 @@ import {
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { attorney } from "@/lib/mock-data";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 export const navItems = [
@@ -71,9 +74,20 @@ export function SidebarBrand() {
 }
 
 export function SidebarUser() {
+  const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.replace("/login");
+    router.refresh();
+  }
+
   return (
-    <div className="flex items-center gap-3 border-t border-white/10 px-5 py-4">
-      <Avatar className="size-8">
+    <div className="flex items-center gap-3 border-t border-white/10 px-5 py-4 md:justify-center md:px-2 lg:justify-start lg:px-5">
+      <Avatar className="size-8 md:hidden lg:flex">
         <AvatarFallback className="bg-zinc-700 text-xs text-white">
           {attorney.name
             .split(" ")
@@ -81,10 +95,22 @@ export function SidebarUser() {
             .join("")}
         </AvatarFallback>
       </Avatar>
-      <div className="lg:block md:hidden">
-        <p className="text-sm font-medium text-white">{attorney.name}</p>
+      <div className="min-w-0 flex-1 lg:block md:hidden">
+        <p className="truncate text-sm font-medium text-white">
+          {attorney.name}
+        </p>
         <p className="text-xs text-zinc-400">{attorney.role}</p>
       </div>
+      <button
+        type="button"
+        onClick={handleSignOut}
+        disabled={signingOut}
+        title="Log out"
+        className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-50"
+      >
+        <LogOut className="size-4" />
+        <span className="sr-only">Log out</span>
+      </button>
     </div>
   );
 }
