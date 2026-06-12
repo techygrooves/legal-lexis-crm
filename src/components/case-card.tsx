@@ -2,9 +2,15 @@ import Link from "next/link";
 import { FolderClosed } from "lucide-react";
 
 import { StatusBadge } from "@/components/status-badge";
-import type { Case } from "@/lib/mock-data";
 
-export function CaseCard({ caseItem }: { caseItem: Case }) {
+export interface CaseCardData {
+  id: string;
+  title: string;
+  courtName: string;
+  status: string;
+}
+
+export function CaseCard({ caseItem }: { caseItem: CaseCardData }) {
   return (
     <Link
       href={`/cases/${caseItem.id}`}
@@ -16,7 +22,7 @@ export function CaseCard({ caseItem }: { caseItem: Case }) {
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{caseItem.title}</p>
         <p className="truncate text-xs text-muted-foreground">
-          {caseItem.courtName}
+          {caseItem.courtName || "—"}
         </p>
       </div>
       <StatusBadge status={caseItem.status} />

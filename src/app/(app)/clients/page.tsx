@@ -1,108 +1,46 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { ClientsList, type ClientListItem } from "./clients-list";
 
-import { DataTable, type Column } from "@/components/data-table";
-import { StatusBadge } from "@/components/status-badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { clients, type Client } from "@/lib/mock-data";
+export default async function ClientsPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-const columns: Column<Client>[] = [
-  {
-    header: "Client Name",
-    cell: (client) => <span className="font-medium">{client.name}</span>,
-  },
-  {
-    header: "Email",
-    cell: (client) => client.email,
-    className: "text-muted-foreground",
-  },
-  {
-    header: "Phone",
-    cell: (client) => client.phone,
-    className: "text-muted-foreground",
-  },
-  {
-    header: "Status",
-    cell: (client) => <StatusBadge status={client.status} />,
-  },
-  {
-    header: "Cases",
-    cell: (client) => client.matters,
-    className: "text-right",
-  },
-];
+  const [{ data: clients, error }, { data: cases }] = await Promise.all([
+    supabase
+      .from("clients")
+      .select("id, full_name, email, phone, status")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase.from("cases").select("id, client_id").eq("user_id", user.id),
+  ]);
 
-export default function ClientsPage() {
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("all");
+  if (error) {
+    throw new Error(`Failed to load clients: ${error.message}`);
+  }
 
-  const filtered = clients.filter((client) => {
-    const matchesQuery =
-      client.name.toLowerCase().includes(query.toLowerCase()) ||
-      client.email.toLowerCase().includes(query.toLowerCase());
-    const matchesStatus =
-      status === "all" || client.status.toLowerCase() === status;
-    return matchesQuery && matchesStatus;
-  });
+  const caseCounts = new Map<string, number>();
+  for (const caseRow of cases ?? []) {
+    if (caseRow.client_id) {
+      caseCounts.set(
+        caseRow.client_id,
+        (caseCounts.get(caseRow.client_id) ?? 0) + 1
+      );
+    }
+  }
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Clients</h1>
-        <Button>
-          <Plus data-icon="inline-start" />
-          Add Client
-        </Button>
-      </div>
+  const items: ClientListItem[] = (clients ?? []).map((row) => ({
+    id: row.id,
+    name: row.full_name,
+    email: row.email ?? "",
+    phone: row.phone ?? "",
+    status: row.status,
+    caseCount: caseCounts.get(row.id) ?? 0,
+  }));
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search clients..."
-            className="pl-9"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-36">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <Card>
-        <CardContent className="px-0 py-0">
-          <DataTable
-            columns={columns}
-            data={filtered}
-            getRowKey={(client) => client.id}
-            emptyMessage="No clients match your search."
-          />
-        </CardContent>
-      </Card>
-
-      <p className="text-sm text-muted-foreground">
-        Showing {filtered.length} of {clients.length} clients
-      </p>
-    </div>
-  );
+  return <ClientsList clients={items} />;
 }

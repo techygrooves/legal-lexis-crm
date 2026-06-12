@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowLeft, Paperclip, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, Paperclip, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -25,11 +25,27 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { practiceAreas } from "@/lib/mock-data";
+import { createCase } from "./actions";
 
 interface ImportantDate {
   label: string;
+  type: string;
   date: string;
 }
+
+interface TaskEntry {
+  title: string;
+  dueDate: string;
+}
+
+interface ContactEntry {
+  name: string;
+  role: string;
+  email: string;
+  phone: string;
+}
+
+const eventTypes = ["hearing", "meeting", "deadline", "conference"];
 
 function Field({
   id,
@@ -50,18 +66,70 @@ function Field({
 
 export default function AddCasePage() {
   const router = useRouter();
+  const [submitting, setSubmitting] = useState(false);
   const [importantDates, setImportantDates] = useState<ImportantDate[]>([
-    { label: "", date: "" },
+    { label: "", type: "hearing", date: "" },
   ]);
-  const [taskList, setTaskList] = useState<string[]>([""]);
+  const [taskList, setTaskList] = useState<TaskEntry[]>([
+    { title: "", dueDate: "" },
+  ]);
+  const [contactList, setContactList] = useState<ContactEntry[]>([
+    { name: "", role: "", email: "", phone: "" },
+  ]);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    // Mock only — Supabase persistence comes later.
-    toast.success("Case created", {
-      description: "Saved locally as mock data. Database hookup comes next.",
+    if (submitting) return;
+    setSubmitting(true);
+
+    const formData = new FormData(e.currentTarget);
+    const field = (name: string) => (formData.get(name) as string) ?? "";
+
+    const result = await createCase({
+      client: {
+        fullName: field("clientName"),
+        email: field("clientEmail"),
+        phone: field("clientPhone"),
+        address: field("clientAddress"),
+        source: field("clientSource"),
+      },
+      caseDetails: {
+        title: field("caseTitle"),
+        practiceArea: field("practiceArea"),
+        caseNumber: field("caseNumber"),
+        courtName: field("courtName"),
+        courtNumber: field("courtNumber"),
+        judgeName: field("judgeName"),
+        opposingParty: field("opposingParty"),
+        opposingAttorney: field("opposingAttorney"),
+        status: field("caseStatus"),
+        filedDate: field("filedDate"),
+      },
+      events: importantDates.map((entry) => ({
+        title: entry.label,
+        eventType: entry.type,
+        eventDate: entry.date,
+      })),
+      tasks: taskList.map((task) => ({
+        title: task.title,
+        dueDate: task.dueDate,
+      })),
+      note: field("notes"),
+      contacts: contactList,
     });
-    router.push("/cases");
+
+    if (result.error) {
+      toast.error("Could not create case", { description: result.error });
+      setSubmitting(false);
+      return;
+    }
+
+    if (result.warning) {
+      toast.warning(result.warning);
+    } else {
+      toast.success("Case created");
+    }
+    router.push(`/cases/${result.caseId}`);
   }
 
   return (
@@ -81,7 +149,8 @@ export default function AddCasePage() {
           <CardHeader>
             <CardTitle>Client Information</CardTitle>
             <CardDescription>
-              Who is this case for? New clients are created automatically.
+              Who is this case for? A new client record is created
+              automatically.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -96,6 +165,9 @@ export default function AddCasePage() {
             </Field>
             <Field id="client-address" label="Client Address">
               <Input id="client-address" name="clientAddress" placeholder="123 Main St, Miami, FL" />
+            </Field>
+            <Field id="client-source" label="Source">
+              <Input id="client-source" name="clientSource" placeholder="e.g. Referral" />
             </Field>
           </CardContent>
         </Card>
@@ -141,16 +213,19 @@ export default function AddCasePage() {
               <Input id="opposing-attorney" name="opposingAttorney" placeholder="John Counsel, Esq." />
             </Field>
             <Field id="case-status" label="Case Status">
-              <Select name="caseStatus" defaultValue="Open">
+              <Select name="caseStatus" defaultValue="open">
                 <SelectTrigger id="case-status" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Open">Open</SelectItem>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                  <SelectItem value="Closed">Closed</SelectItem>
+                  <SelectItem value="open">Open</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="closed">Closed</SelectItem>
                 </SelectContent>
               </Select>
+            </Field>
+            <Field id="filed-date" label="Filed Date">
+              <Input id="filed-date" name="filedDate" type="date" />
             </Field>
           </CardContent>
         </Card>
@@ -164,12 +239,12 @@ export default function AddCasePage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {importantDates.map((entry, index) => (
-              <div key={index} className="flex items-end gap-3">
-                <div className="flex-1 space-y-1.5">
+              <div key={index} className="flex flex-wrap items-end gap-3">
+                <div className="min-w-40 flex-1 space-y-1.5">
                   <Label htmlFor={`date-label-${index}`}>Label</Label>
                   <Input
                     id={`date-label-${index}`}
-                    placeholder="e.g. Hearing"
+                    placeholder="e.g. Initial Hearing"
                     value={entry.label}
                     onChange={(e) =>
                       setImportantDates((dates) =>
@@ -179,6 +254,30 @@ export default function AddCasePage() {
                       )
                     }
                   />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`date-type-${index}`}>Type</Label>
+                  <Select
+                    value={entry.type}
+                    onValueChange={(value) =>
+                      setImportantDates((dates) =>
+                        dates.map((d, i) =>
+                          i === index ? { ...d, type: value } : d
+                        )
+                      )
+                    }
+                  >
+                    <SelectTrigger id={`date-type-${index}`} className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {eventTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor={`date-value-${index}`}>Date</Label>
@@ -216,7 +315,10 @@ export default function AddCasePage() {
               variant="outline"
               size="sm"
               onClick={() =>
-                setImportantDates((dates) => [...dates, { label: "", date: "" }])
+                setImportantDates((dates) => [
+                  ...dates,
+                  { label: "", type: "hearing", date: "" },
+                ])
               }
             >
               <Plus data-icon="inline-start" />
@@ -232,17 +334,37 @@ export default function AddCasePage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {taskList.map((task, index) => (
-              <div key={index} className="flex items-center gap-3">
-                <Input
-                  placeholder="e.g. Draft engagement letter"
-                  aria-label={`Task ${index + 1}`}
-                  value={task}
-                  onChange={(e) =>
-                    setTaskList((list) =>
-                      list.map((t, i) => (i === index ? e.target.value : t))
-                    )
-                  }
-                />
+              <div key={index} className="flex flex-wrap items-end gap-3">
+                <div className="min-w-40 flex-1 space-y-1.5">
+                  <Label htmlFor={`task-title-${index}`}>Task</Label>
+                  <Input
+                    id={`task-title-${index}`}
+                    placeholder="e.g. Draft engagement letter"
+                    value={task.title}
+                    onChange={(e) =>
+                      setTaskList((list) =>
+                        list.map((t, i) =>
+                          i === index ? { ...t, title: e.target.value } : t
+                        )
+                      )
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`task-due-${index}`}>Due Date</Label>
+                  <Input
+                    id={`task-due-${index}`}
+                    type="date"
+                    value={task.dueDate}
+                    onChange={(e) =>
+                      setTaskList((list) =>
+                        list.map((t, i) =>
+                          i === index ? { ...t, dueDate: e.target.value } : t
+                        )
+                      )
+                    }
+                  />
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
@@ -261,10 +383,116 @@ export default function AddCasePage() {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setTaskList((list) => [...list, ""])}
+              onClick={() =>
+                setTaskList((list) => [...list, { title: "", dueDate: "" }])
+              }
             >
               <Plus data-icon="inline-start" />
               Add Task
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Related Contacts</CardTitle>
+            <CardDescription>
+              Optional people connected to this case — opposing counsel,
+              witnesses, experts.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {contactList.map((contact, index) => (
+              <div key={index} className="flex flex-wrap items-end gap-3">
+                <div className="min-w-36 flex-1 space-y-1.5">
+                  <Label htmlFor={`contact-name-${index}`}>Name</Label>
+                  <Input
+                    id={`contact-name-${index}`}
+                    placeholder="Full name"
+                    value={contact.name}
+                    onChange={(e) =>
+                      setContactList((list) =>
+                        list.map((c, i) =>
+                          i === index ? { ...c, name: e.target.value } : c
+                        )
+                      )
+                    }
+                  />
+                </div>
+                <div className="min-w-28 space-y-1.5">
+                  <Label htmlFor={`contact-role-${index}`}>Role</Label>
+                  <Input
+                    id={`contact-role-${index}`}
+                    placeholder="e.g. Witness"
+                    value={contact.role}
+                    onChange={(e) =>
+                      setContactList((list) =>
+                        list.map((c, i) =>
+                          i === index ? { ...c, role: e.target.value } : c
+                        )
+                      )
+                    }
+                  />
+                </div>
+                <div className="min-w-36 space-y-1.5">
+                  <Label htmlFor={`contact-email-${index}`}>Email</Label>
+                  <Input
+                    id={`contact-email-${index}`}
+                    type="email"
+                    placeholder="email@example.com"
+                    value={contact.email}
+                    onChange={(e) =>
+                      setContactList((list) =>
+                        list.map((c, i) =>
+                          i === index ? { ...c, email: e.target.value } : c
+                        )
+                      )
+                    }
+                  />
+                </div>
+                <div className="min-w-28 space-y-1.5">
+                  <Label htmlFor={`contact-phone-${index}`}>Phone</Label>
+                  <Input
+                    id={`contact-phone-${index}`}
+                    type="tel"
+                    placeholder="(555) 000-0000"
+                    value={contact.phone}
+                    onChange={(e) =>
+                      setContactList((list) =>
+                        list.map((c, i) =>
+                          i === index ? { ...c, phone: e.target.value } : c
+                        )
+                      )
+                    }
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  disabled={contactList.length === 1}
+                  onClick={() =>
+                    setContactList((list) => list.filter((_, i) => i !== index))
+                  }
+                >
+                  <Trash2 />
+                  <span className="sr-only">Remove contact</span>
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setContactList((list) => [
+                  ...list,
+                  { name: "", role: "", email: "", phone: "" },
+                ])
+              }
+            >
+              <Plus data-icon="inline-start" />
+              Add Contact
             </Button>
           </CardContent>
         </Card>
@@ -282,16 +510,13 @@ export default function AddCasePage() {
                 placeholder="Case strategy, background, first impressions..."
               />
             </Field>
-            <Field id="documents" label="Documents">
-              <label
-                htmlFor="documents"
-                className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-6 text-sm text-muted-foreground transition-colors hover:bg-muted/50"
-              >
+            <div className="space-y-1.5">
+              <Label>Documents</Label>
+              <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-6 text-sm text-muted-foreground opacity-60">
                 <Paperclip className="size-4" />
-                Click to attach files (mock — not uploaded yet)
-              </label>
-              <input id="documents" name="documents" type="file" multiple className="sr-only" />
-            </Field>
+                Document upload will be added later.
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -299,7 +524,12 @@ export default function AddCasePage() {
           <Button type="button" variant="outline" asChild>
             <Link href="/cases">Cancel</Link>
           </Button>
-          <Button type="submit">Create Case</Button>
+          <Button type="submit" disabled={submitting}>
+            {submitting && (
+              <Loader2 className="animate-spin" data-icon="inline-start" />
+            )}
+            Create Case
+          </Button>
         </div>
       </form>
     </div>

@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { format, parseISO } from "date-fns";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Paperclip } from "lucide-react";
 
-import { DocumentList } from "@/components/document-list";
 import { StatusBadge } from "@/components/status-badge";
 import {
   Card,
@@ -11,7 +10,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { cases, documents, events, tasks } from "@/lib/mock-data";
+import { createClient } from "@/lib/supabase/server";
+
+function formatTime(time: string | null) {
+  if (!time) return null;
+  const [hours, minutes] = time.split(":").map(Number);
+  const period = hours >= 12 ? "PM" : "AM";
+  const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+  return `${displayHours}:${String(minutes).padStart(2, "0")} ${period}`;
+}
 
 export default async function CaseDetailPage({
   params,
@@ -19,26 +26,77 @@ export default async function CaseDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const caseItem = cases.find((c) => c.id === id);
-  if (!caseItem) notFound();
 
-  const caseDocuments = documents.filter(
-    (doc) => doc.caseTitle === caseItem.title
-  );
-  const caseTasks = tasks.filter((task) => task.caseTitle === caseItem.title);
-  const caseEvents = events
-    .filter((event) => event.title.includes(caseItem.title.split(" ")[0]))
-    .slice(0, 3);
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: caseRow } = await supabase
+    .from("cases")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!caseRow) notFound();
+
+  const [
+    { data: client },
+    { data: events },
+    { data: tasks },
+    { data: notes },
+    { data: contacts },
+  ] = await Promise.all([
+    caseRow.client_id
+      ? supabase
+          .from("clients")
+          .select("id, full_name, email, phone")
+          .eq("id", caseRow.client_id)
+          .eq("user_id", user.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase
+      .from("case_events")
+      .select("*")
+      .eq("case_id", id)
+      .eq("user_id", user.id)
+      .order("event_date", { ascending: true }),
+    supabase
+      .from("tasks")
+      .select("*")
+      .eq("case_id", id)
+      .eq("user_id", user.id)
+      .order("due_date", { ascending: true, nullsFirst: false }),
+    supabase
+      .from("notes")
+      .select("*")
+      .eq("case_id", id)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("contacts")
+      .select("*")
+      .eq("case_id", id)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: true }),
+  ]);
 
   const details: [string, string][] = [
-    ["Practice Area", caseItem.practiceArea],
-    ["Case Number", caseItem.caseNumber],
-    ["Court", caseItem.courtName],
-    ["Court Number", caseItem.courtNumber],
-    ["Judge", caseItem.judgeName],
-    ["Opposing Party", caseItem.opposingParty],
-    ["Opposing Attorney", caseItem.opposingAttorney],
-    ["Filed Date", format(parseISO(caseItem.filedDate), "MMMM d, yyyy")],
+    ["Practice Area", caseRow.practice_area ?? "—"],
+    ["Case Number", caseRow.case_number ?? "—"],
+    ["Court", caseRow.court_name ?? "—"],
+    ["Court Number", caseRow.court_number ?? "—"],
+    ["Judge", caseRow.judge_name ?? "—"],
+    ["Opposing Party", caseRow.opposing_party ?? "—"],
+    ["Opposing Attorney", caseRow.opposing_attorney ?? "—"],
+    [
+      "Filed Date",
+      caseRow.filed_date
+        ? format(parseISO(caseRow.filed_date), "MMMM d, yyyy")
+        : "—",
+    ],
   ];
 
   return (
@@ -53,12 +111,19 @@ export default async function CaseDetailPage({
 
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">
-          {caseItem.title}
+          {caseRow.title}
         </h1>
-        <StatusBadge status={caseItem.status} />
+        <StatusBadge status={caseRow.status} />
       </div>
       <p className="text-sm text-muted-foreground">
-        Client: <span className="text-foreground">{caseItem.clientName}</span>
+        Client:{" "}
+        <span className="text-foreground">{client?.full_name ?? "—"}</span>
+        {client?.email && (
+          <span className="text-muted-foreground"> · {client.email}</span>
+        )}
+        {client?.phone && (
+          <span className="text-muted-foreground"> · {client.phone}</span>
+        )}
       </p>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -69,7 +134,10 @@ export default async function CaseDetailPage({
           <CardContent>
             <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
               {details.map(([label, value]) => (
-                <div key={label} className="flex justify-between gap-3 border-b pb-2 text-sm">
+                <div
+                  key={label}
+                  className="flex justify-between gap-3 border-b pb-2 text-sm"
+                >
                   <dt className="text-muted-foreground">{label}</dt>
                   <dd className="text-right font-medium">{value}</dd>
                 </div>
@@ -77,7 +145,22 @@ export default async function CaseDetailPage({
             </dl>
             <div className="mt-4">
               <p className="text-sm text-muted-foreground">Notes</p>
-              <p className="mt-1 text-sm">{caseItem.notes}</p>
+              {(notes ?? []).length === 0 ? (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  No notes yet.
+                </p>
+              ) : (
+                <div className="mt-1 space-y-3">
+                  {(notes ?? []).map((note) => (
+                    <div key={note.id} className="text-sm">
+                      <p className="whitespace-pre-wrap">{note.note}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {format(parseISO(note.created_at), "MMM d, yyyy")}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -88,28 +171,29 @@ export default async function CaseDetailPage({
               <CardTitle>Important Dates</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {caseEvents.length === 0 && (
+              {(events ?? []).length === 0 && (
                 <p className="text-sm text-muted-foreground">
                   No upcoming dates.
                 </p>
               )}
-              {caseEvents.map((event) => (
+              {(events ?? []).map((event) => (
                 <div key={event.id} className="flex items-start gap-3">
                   <div className="flex w-11 shrink-0 flex-col items-center rounded-lg border py-1">
                     <span className="text-[10px] font-medium text-red-500 uppercase">
-                      {format(parseISO(event.date), "MMM")}
+                      {format(parseISO(event.event_date), "MMM")}
                     </span>
                     <span className="text-base leading-5 font-semibold">
-                      {format(parseISO(event.date), "d")}
+                      {format(parseISO(event.event_date), "d")}
                     </span>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium">{event.type}</p>
+                    <p className="text-sm font-medium">{event.title}</p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {event.startTime ?? "All day"}
+                      {formatTime(event.start_time) ?? "All day"}
                       {event.location && ` · ${event.location}`}
                     </p>
                   </div>
+                  <StatusBadge status={event.event_type} className="ml-auto" />
                 </div>
               ))}
             </CardContent>
@@ -120,15 +204,52 @@ export default async function CaseDetailPage({
               <CardTitle>Tasks</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {caseTasks.length === 0 && (
+              {(tasks ?? []).length === 0 && (
                 <p className="text-sm text-muted-foreground">No open tasks.</p>
               )}
-              {caseTasks.map((task) => (
-                <div key={task.id} className="flex justify-between gap-3 text-sm">
+              {(tasks ?? []).map((task) => (
+                <div
+                  key={task.id}
+                  className="flex justify-between gap-3 text-sm"
+                >
                   <span className="truncate">{task.title}</span>
                   <span className="shrink-0 text-xs text-muted-foreground">
-                    {format(parseISO(task.dueDate), "MMM d")}
+                    {task.due_date
+                      ? format(parseISO(task.due_date), "MMM d")
+                      : "—"}
                   </span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Contacts</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {(contacts ?? []).length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  No related contacts.
+                </p>
+              )}
+              {(contacts ?? []).map((contact) => (
+                <div key={contact.id} className="text-sm">
+                  <p className="font-medium">
+                    {contact.name}
+                    {contact.role && (
+                      <span className="ml-1.5 font-normal text-muted-foreground">
+                        · {contact.role}
+                      </span>
+                    )}
+                  </p>
+                  {(contact.email || contact.phone) && (
+                    <p className="truncate text-xs text-muted-foreground">
+                      {[contact.email, contact.phone]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  )}
                 </div>
               ))}
             </CardContent>
@@ -141,11 +262,10 @@ export default async function CaseDetailPage({
           <CardTitle>Documents</CardTitle>
         </CardHeader>
         <CardContent>
-          {caseDocuments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No documents yet.</p>
-          ) : (
-            <DocumentList documents={caseDocuments} layout="grid" />
-          )}
+          <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-6 text-sm text-muted-foreground">
+            <Paperclip className="size-4" />
+            Document upload will be added later.
+          </div>
         </CardContent>
       </Card>
     </div>

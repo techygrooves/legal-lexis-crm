@@ -17,7 +17,7 @@ type Relationship = {
   referencedColumns: string[];
 };
 
-export interface ClientRow {
+export type ClientRow = {
   id: string;
   user_id: string;
   full_name: string;
@@ -31,7 +31,7 @@ export interface ClientRow {
   updated_at: string;
 }
 
-export interface CaseRow {
+export type CaseRow = {
   id: string;
   user_id: string;
   client_id: string | null;
@@ -50,7 +50,7 @@ export interface CaseRow {
   updated_at: string;
 }
 
-export interface CaseEventRow {
+export type CaseEventRow = {
   id: string;
   user_id: string;
   case_id: string | null;
@@ -66,7 +66,7 @@ export interface CaseEventRow {
   updated_at: string;
 }
 
-export interface TaskRow {
+export type TaskRow = {
   id: string;
   user_id: string;
   case_id: string | null;
@@ -80,7 +80,7 @@ export interface TaskRow {
   updated_at: string;
 }
 
-export interface DocumentRow {
+export type DocumentRow = {
   id: string;
   user_id: string;
   case_id: string | null;
@@ -94,7 +94,7 @@ export interface DocumentRow {
   created_at: string;
 }
 
-export interface NoteRow {
+export type NoteRow = {
   id: string;
   user_id: string;
   case_id: string | null;
@@ -104,7 +104,7 @@ export interface NoteRow {
   updated_at: string;
 }
 
-export interface ContactRow {
+export type ContactRow = {
   id: string;
   user_id: string;
   case_id: string | null;
@@ -125,14 +125,14 @@ type InsertOf<Row, Defaulted extends keyof Row = never> = Omit<
 > &
   Partial<Pick<Row, Extract<"id" | "created_at" | "updated_at" | "uploaded_at" | Defaulted, keyof Row>>>;
 
-interface TableOf<Row, Defaulted extends keyof Row = never> {
+type TableOf<Row extends Record<string, unknown>, Defaulted extends keyof Row & string = never> = {
   Row: Row;
   Insert: InsertOf<Row, Defaulted>;
   Update: Partial<Row>;
   Relationships: Relationship[];
 }
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       clients: TableOf<ClientRow, "status">;

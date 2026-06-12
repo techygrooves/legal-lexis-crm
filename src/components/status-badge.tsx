@@ -19,15 +19,18 @@ export function StatusBadge({
   status: string;
   className?: string;
 }) {
+  // Database values are lowercase ("open"); normalize for lookup and display.
+  const label = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+
   return (
     <span
       className={cn(
         "inline-flex h-5 shrink-0 items-center rounded-full px-2 text-xs font-medium whitespace-nowrap",
-        statusStyles[status] ?? "bg-muted text-muted-foreground",
+        statusStyles[label] ?? "bg-muted text-muted-foreground",
         className
       )}
     >
-      {status}
+      {label}
     </span>
   );
 }
