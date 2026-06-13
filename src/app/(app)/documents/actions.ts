@@ -56,6 +56,7 @@ function revalidateDocumentViews(caseId?: string | null) {
   if (caseId) revalidatePath(`/cases/${caseId}`);
 }
 
+// Centralize storage setup guidance so merge resolution keeps one upload error.
 function uploadSetupError(message: string) {
   return [
     `Upload failed: ${message}.`,
@@ -158,7 +159,7 @@ export async function uploadDocument(
     .upload(path, file, {
       contentType: file.type || undefined,
       upsert: false,
-  });
+    });
   if (uploadError) {
     return { error: uploadSetupError(uploadError.message) };
   }

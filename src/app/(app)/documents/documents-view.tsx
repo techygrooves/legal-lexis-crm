@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+// Keep all document mutations under one namespace to avoid named-import drift.
 import * as documentActions from "./actions";
 
 export interface DocumentListItem {
