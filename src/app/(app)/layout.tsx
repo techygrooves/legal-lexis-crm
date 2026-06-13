@@ -18,11 +18,13 @@ export default async function AppLayout({
     redirect("/login");
   }
 
+  const userEmail = user.email ?? "";
+
   return (
     <div className="flex min-h-svh">
-      <Sidebar />
+      <Sidebar userEmail={userEmail} />
       <div className="flex min-w-0 flex-1 flex-col bg-zinc-50 dark:bg-background">
-        <Header />
+        <Header userEmail={userEmail} />
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </div>
     </div>

@@ -70,13 +70,22 @@ to sign up**).
 
 ### 5. Storage bucket for documents
 
-1. In the dashboard, go to **Storage**.
-2. Click **New bucket**, name it `case-documents`.
-3. Leave it **private** (do not enable "Public bucket").
+Document upload on the case detail page is now live, and requires a bucket plus
+storage policies:
 
-> **Important:** Real document upload is not wired up yet. Do not upload
-> confidential client documents until RLS and private storage access policies
-> are added in a later step.
+1. In the dashboard, go to **Storage → New bucket**, name it `case-documents`,
+   and leave it **Private** (do not enable "Public bucket").
+2. Open **SQL Editor → New query**, paste the contents of
+   `supabase/storage/case-documents-policies.sql`, and **Run**. Uploads and
+   downloads will fail against a private bucket until these policies exist.
+
+Files are stored under `<user-id>/<case-id>/<filename>` and served through
+short-lived signed URLs. The storage policies scope each user to their own
+folder.
+
+> **Important:** This protects stored files, but table-level RLS on the
+> `public` schema is still **not** enabled. Until that is added, treat the
+> database as not yet hardened for highly sensitive data.
 
 ## Auth flow
 
@@ -93,8 +102,13 @@ to sign up**).
 
 ## Project notes
 
-- The UI currently renders mock data from `src/lib/mock-data.ts`; forms are
-  not yet connected to the database.
+- Cases, clients, the case detail page, dashboard counts, case documents, and
+  Settings (account info) run on real Supabase data. The Calendar, Tasks, and
+  standalone Documents pages still render mock data from
+  `src/lib/mock-data.ts`.
+- Cases can be created (Add Case), edited (`/cases/[id]/edit`), and deleted
+  (case detail page). Deleting a case cascades to its events, tasks, notes,
+  contacts, and document rows, and removes its stored files.
 - Database types: `src/lib/types/database.ts`.
 - Supabase clients: `src/lib/supabase/client.ts` (browser),
   `src/lib/supabase/server.ts` (server components), and

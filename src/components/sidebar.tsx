@@ -16,9 +16,15 @@ import {
 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { attorney } from "@/lib/mock-data";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+
+// Derive avatar initials from the signed-in user's email (e.g.
+// "jane.doe@firm.com" -> "JA"). Falls back to "U" for an empty value.
+export function emailInitials(email: string) {
+  const local = email.split("@")[0].replace(/[^a-zA-Z]/g, "");
+  return (local.slice(0, 2) || "U").toUpperCase();
+}
 
 export const navItems = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -73,7 +79,7 @@ export function SidebarBrand() {
   );
 }
 
-export function SidebarUser() {
+export function SidebarUser({ userEmail }: { userEmail: string }) {
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
 
@@ -89,17 +95,14 @@ export function SidebarUser() {
     <div className="flex items-center gap-3 border-t border-white/10 px-5 py-4 md:justify-center md:px-2 lg:justify-start lg:px-5">
       <Avatar className="size-8 md:hidden lg:flex">
         <AvatarFallback className="bg-zinc-700 text-xs text-white">
-          {attorney.name
-            .split(" ")
-            .map((n) => n[0])
-            .join("")}
+          {emailInitials(userEmail)}
         </AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1 lg:block md:hidden">
         <p className="truncate text-sm font-medium text-white">
-          {attorney.name}
+          {userEmail || "Signed in"}
         </p>
-        <p className="text-xs text-zinc-400">{attorney.role}</p>
+        <p className="text-xs text-zinc-400">Solo Attorney</p>
       </div>
       <button
         type="button"
@@ -115,12 +118,12 @@ export function SidebarUser() {
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ userEmail }: { userEmail: string }) {
   return (
     <aside className="sticky top-0 hidden h-svh w-16 shrink-0 flex-col bg-zinc-900 md:flex lg:w-60 dark:border-r dark:border-white/10">
       <SidebarBrand />
       <SidebarNav />
-      <SidebarUser />
+      <SidebarUser userEmail={userEmail} />
     </aside>
   );
 }
