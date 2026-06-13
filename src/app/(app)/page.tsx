@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import {
   CalendarCheck,
@@ -9,18 +10,16 @@ import {
 } from "lucide-react";
 
 import { CaseCard } from "@/components/case-card";
-import { DocumentList } from "@/components/document-list";
 import { StatCard } from "@/components/stat-card";
 import { StatusBadge } from "@/components/status-badge";
 import {
   Card,
-  CardAction,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { cases, documents, events, stats, tasks } from "@/lib/mock-data";
+import { createClient } from "@/lib/supabase/server";
 
 function ViewAllLink({ href, label }: { href: string; label: string }) {
   return (
@@ -34,11 +33,72 @@ function ViewAllLink({ href, label }: { href: string; label: string }) {
   );
 }
 
-export default function DashboardPage() {
-  const upcomingEvents = events
-    .filter((event) => event.date >= "2026-06-11")
-    .slice(0, 3);
-  const pendingTasks = tasks.filter((task) => !task.completed).slice(0, 4);
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const today = format(new Date(), "yyyy-MM-dd");
+
+  const [
+    { count: clientCount },
+    { count: openCaseCount },
+    { count: upcomingEventCount },
+    { count: pendingTaskCount },
+    { data: upcomingEvents },
+    { data: recentCases },
+    { data: pendingTasks },
+  ] = await Promise.all([
+    supabase
+      .from("clients")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id),
+    supabase
+      .from("cases")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "open"),
+    supabase
+      .from("case_events")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("event_date", today),
+    supabase
+      .from("tasks")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "pending"),
+    supabase
+      .from("case_events")
+      .select("id, title, event_type, event_date, start_time, end_time, location")
+      .eq("user_id", user.id)
+      .gte("event_date", today)
+      .order("event_date", { ascending: true })
+      .limit(3),
+    supabase
+      .from("cases")
+      .select("id, title, court_name, status")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(4),
+    supabase
+      .from("tasks")
+      .select("id, title, due_date")
+      .eq("user_id", user.id)
+      .eq("status", "pending")
+      .order("due_date", { ascending: true, nullsFirst: false })
+      .limit(4),
+  ]);
+
+  const formatTime = (time: string | null) => {
+    if (!time) return null;
+    const [hours, minutes] = time.split(":").map(Number);
+    const period = hours >= 12 ? "PM" : "AM";
+    const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+    return `${displayHours}:${String(minutes).padStart(2, "0")} ${period}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -47,27 +107,24 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Total Clients"
-          value={stats.totalClients.value}
-          change={stats.totalClients.change}
+          value={clientCount ?? 0}
           icon={Users}
         />
         <StatCard
           label="Open Cases"
-          value={stats.openCases.value}
-          change={stats.openCases.change}
+          value={openCaseCount ?? 0}
           icon={FolderClosed}
         />
         <StatCard
           label="Upcoming Events"
-          value={stats.upcomingEvents.value}
-          change={stats.upcomingEvents.change}
+          value={upcomingEventCount ?? 0}
+          change="From today"
           icon={CalendarCheck}
           iconClassName="bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
         />
         <StatCard
           label="Pending Tasks"
-          value={stats.pendingTasks.value}
-          change={stats.pendingTasks.change}
+          value={pendingTaskCount ?? 0}
           icon={ListChecks}
           iconClassName="bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400"
         />
@@ -79,29 +136,36 @@ export default function DashboardPage() {
             <CardTitle>Upcoming Events</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {upcomingEvents.map((event) => (
+            {(upcomingEvents ?? []).length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No upcoming events.
+              </p>
+            )}
+            {(upcomingEvents ?? []).map((event) => (
               <div key={event.id} className="flex items-start gap-3">
                 <div className="flex w-11 shrink-0 flex-col items-center rounded-lg border py-1.5">
                   <span className="text-[10px] font-medium text-red-500 uppercase">
-                    {format(parseISO(event.date), "MMM")}
+                    {format(parseISO(event.event_date), "MMM")}
                   </span>
                   <span className="text-base leading-5 font-semibold">
-                    {format(parseISO(event.date), "d")}
+                    {format(parseISO(event.event_date), "d")}
                   </span>
                   <span className="text-[10px] text-muted-foreground">
-                    {format(parseISO(event.date), "EEE")}
+                    {format(parseISO(event.event_date), "EEE")}
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{event.title}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {event.startTime
-                      ? `${event.startTime}${event.endTime ? ` - ${event.endTime}` : ""}`
+                    {event.start_time
+                      ? `${formatTime(event.start_time)}${
+                          event.end_time ? ` - ${formatTime(event.end_time)}` : ""
+                        }`
                       : "All day"}
                     {event.location && ` · ${event.location}`}
                   </p>
                 </div>
-                <StatusBadge status={event.type} />
+                <StatusBadge status={event.event_type} />
               </div>
             ))}
             <ViewAllLink href="/calendar" label="View Calendar" />
@@ -113,8 +177,21 @@ export default function DashboardPage() {
             <CardTitle>Recent Cases</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {cases.slice(0, 4).map((caseItem) => (
-              <CaseCard key={caseItem.id} caseItem={caseItem} />
+            {(recentCases ?? []).length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No cases yet. Use Add Case to create your first one.
+              </p>
+            )}
+            {(recentCases ?? []).map((caseRow) => (
+              <CaseCard
+                key={caseRow.id}
+                caseItem={{
+                  id: caseRow.id,
+                  title: caseRow.title,
+                  courtName: caseRow.court_name ?? "",
+                  status: caseRow.status,
+                }}
+              />
             ))}
             <ViewAllLink href="/cases" label="View All Cases" />
           </CardContent>
@@ -125,18 +202,23 @@ export default function DashboardPage() {
             <CardTitle>Tasks Due Soon</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {pendingTasks.map((task) => (
+            {(pendingTasks ?? []).length === 0 && (
+              <p className="text-sm text-muted-foreground">No pending tasks.</p>
+            )}
+            {(pendingTasks ?? []).map((task) => (
               <div key={task.id} className="flex items-start gap-3">
-                <Checkbox className="mt-0.5" aria-label={`Mark "${task.title}" complete`} />
+                <Checkbox
+                  className="mt-0.5"
+                  aria-label={`Mark "${task.title}" complete`}
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{task.title}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {task.caseTitle}
-                  </p>
                 </div>
-                <span className="text-xs font-medium text-red-500">
-                  {format(parseISO(task.dueDate), "MMM d")}
-                </span>
+                {task.due_date && (
+                  <span className="text-xs font-medium text-red-500">
+                    {format(parseISO(task.due_date), "MMM d")}
+                  </span>
+                )}
               </div>
             ))}
             <ViewAllLink href="/tasks" label="View All Tasks" />
@@ -147,12 +229,11 @@ export default function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>Recent Documents</CardTitle>
-          <CardAction>
-            <ViewAllLink href="/documents" label="View All Documents" />
-          </CardAction>
         </CardHeader>
         <CardContent>
-          <DocumentList documents={documents.slice(0, 4)} layout="grid" />
+          <p className="text-sm text-muted-foreground">
+            No documents yet. Document upload will be added later.
+          </p>
         </CardContent>
       </Card>
     </div>
