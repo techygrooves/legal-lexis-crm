@@ -52,6 +52,12 @@ Using the dashboard:
 
 Or with the Supabase CLI: `supabase db push` after `supabase link`.
 
+If this project is already deployed and the initial migration was already run
+before document folders were added, also run
+`supabase/migrations/20260613000000_document_folders_existing_deploy.sql` in the
+SQL Editor (or with the CLI). Without this migration, deployed pages that query
+`document_folders` can fail even if the Vercel deployment succeeds.
+
 > **Note:** Row Level Security is intentionally not enabled yet. Every table
 > already has a `user_id` column so RLS policies can be added in a later
 > migration. Until RLS is in place, do not store real confidential client
@@ -77,11 +83,15 @@ storage policies:
    and leave it **Private** (do not enable "Public bucket").
 2. Open **SQL Editor → New query**, paste the contents of
    `supabase/storage/case-documents-policies.sql`, and **Run**. Uploads and
-   downloads will fail against a private bucket until these policies exist.
+   downloads will fail against a private bucket until these storage policies
+   exist. If uploads fail with a row-level-security error on `storage.objects`,
+   this is the file to rerun.
 
-Files are stored under `<user-id>/<case-id>/<filename>` and served through
-short-lived signed URLs. The storage policies scope each user to their own
-folder.
+Files are stored under `<user-id>/<case-id>/<folder-or-root>/<filename>` and
+served through short-lived signed URLs. The storage policies scope each user to
+their own folder. The app also stores case-specific folder records in the
+database so folders can be created and renamed without depending only on
+storage paths.
 
 > **Important:** This protects stored files, but table-level RLS on the
 > `public` schema is still **not** enabled. Until that is added, treat the
@@ -102,10 +112,9 @@ folder.
 
 ## Project notes
 
-- Cases, clients, the case detail page, dashboard counts, case documents, and
-  Settings (account info) run on real Supabase data. The Calendar, Tasks, and
-  standalone Documents pages still render mock data from
-  `src/lib/mock-data.ts`.
+- Cases, clients, the case detail page, dashboard counts, case documents,
+  Calendar, Tasks, standalone Documents, and Settings (account info) run on
+  real Supabase data.
 - Cases can be created (Add Case), edited (`/cases/[id]/edit`), and deleted
   (case detail page). Deleting a case cascades to its events, tasks, notes,
   contacts, and document rows, and removes its stored files.

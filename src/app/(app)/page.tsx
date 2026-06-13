@@ -4,6 +4,7 @@ import { format, parseISO } from "date-fns";
 import {
   CalendarCheck,
   ChevronRight,
+  FileText,
   FolderClosed,
   ListChecks,
   Users,
@@ -50,6 +51,7 @@ export default async function DashboardPage() {
     { data: upcomingEvents },
     { data: recentCases },
     { data: pendingTasks },
+    { data: recentDocuments },
   ] = await Promise.all([
     supabase
       .from("clients")
@@ -89,6 +91,12 @@ export default async function DashboardPage() {
       .eq("user_id", user.id)
       .eq("status", "pending")
       .order("due_date", { ascending: true, nullsFirst: false })
+      .limit(4),
+    supabase
+      .from("documents")
+      .select("id, file_name, file_type, case_id, uploaded_at")
+      .eq("user_id", user.id)
+      .order("uploaded_at", { ascending: false })
       .limit(4),
   ]);
 
@@ -230,10 +238,30 @@ export default async function DashboardPage() {
         <CardHeader>
           <CardTitle>Recent Documents</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            No documents yet. Document upload will be added later.
-          </p>
+        <CardContent className="space-y-3">
+          {(recentDocuments ?? []).length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              No documents yet. Upload from a case page or Documents.
+            </p>
+          )}
+          {(recentDocuments ?? []).map((doc) => (
+            <Link
+              key={doc.id}
+              href={doc.case_id ? `/cases/${doc.case_id}` : "/documents"}
+              className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 hover:bg-accent"
+            >
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
+                <FileText className="size-4.5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{doc.file_name}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  Case document · {format(parseISO(doc.uploaded_at), "MMM d")}
+                </p>
+              </div>
+            </Link>
+          ))}
+          <ViewAllLink href="/documents" label="View Documents" />
         </CardContent>
       </Card>
     </div>

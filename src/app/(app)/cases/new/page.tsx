@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { practiceAreas } from "@/lib/mock-data";
+import { uploadDocument } from "../../documents/actions";
 import { createCase } from "./actions";
 
 interface ImportantDate {
@@ -43,6 +44,11 @@ interface ContactEntry {
   role: string;
   email: string;
   phone: string;
+}
+
+interface PendingDocument {
+  id: string;
+  file: File;
 }
 
 const eventTypes = ["hearing", "meeting", "deadline", "conference"];
@@ -76,6 +82,25 @@ export default function AddCasePage() {
   const [contactList, setContactList] = useState<ContactEntry[]>([
     { name: "", role: "", email: "", phone: "" },
   ]);
+  const [documents, setDocuments] = useState<PendingDocument[]>([]);
+
+  function handleDocumentSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+
+    setDocuments((current) => [
+      ...current,
+      ...files.map((file) => ({
+        id: `${file.name}-${file.lastModified}-${crypto.randomUUID()}`,
+        file,
+      })),
+    ]);
+    e.target.value = "";
+  }
+
+  function removeDocument(id: string) {
+    setDocuments((current) => current.filter((doc) => doc.id !== id));
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -124,10 +149,29 @@ export default function AddCasePage() {
       return;
     }
 
-    if (result.warning) {
+    const uploadErrors: string[] = [];
+    if (result.caseId && documents.length > 0) {
+      for (const document of documents) {
+        const uploadData = new FormData();
+        uploadData.append("caseId", result.caseId);
+        uploadData.append("file", document.file);
+        const uploadResult = await uploadDocument(uploadData);
+        if (uploadResult.error) {
+          uploadErrors.push(`${document.file.name}: ${uploadResult.error}`);
+        }
+      }
+    }
+
+    if (uploadErrors.length > 0) {
+      toast.warning("Case created, but some documents failed to upload", {
+        description: uploadErrors.join(" | "),
+      });
+    } else if (result.warning) {
       toast.warning(result.warning);
     } else {
-      toast.success("Case created");
+      toast.success(
+        documents.length > 0 ? "Case and documents created" : "Case created"
+      );
     }
     router.push(`/cases/${result.caseId}`);
   }
@@ -510,11 +554,48 @@ export default function AddCasePage() {
                 placeholder="Case strategy, background, first impressions..."
               />
             </Field>
-            <div className="space-y-1.5">
-              <Label>Documents</Label>
-              <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-6 text-sm text-muted-foreground opacity-60">
-                <Paperclip className="size-4" />
-                Document upload will be added later.
+            <div className="space-y-2">
+              <Label htmlFor="case-documents">Documents</Label>
+              <div className="rounded-lg border border-dashed px-4 py-4">
+                <div className="flex flex-col items-center justify-center gap-3 text-center sm:flex-row sm:justify-between sm:text-left">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Paperclip className="size-4" />
+                    Attach documents now. They upload after the case is created.
+                  </div>
+                  <Input
+                    id="case-documents"
+                    type="file"
+                    multiple
+                    className="max-w-xs"
+                    onChange={handleDocumentSelect}
+                    disabled={submitting}
+                  />
+                </div>
+                {documents.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {documents.map((document) => (
+                      <div
+                        key={document.id}
+                        className="flex items-center gap-2 rounded-md border bg-card px-3 py-2 text-sm"
+                      >
+                        <Paperclip className="size-4 shrink-0 text-muted-foreground" />
+                        <span className="min-w-0 flex-1 truncate">
+                          {document.file.name}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          disabled={submitting}
+                          onClick={() => removeDocument(document.id)}
+                        >
+                          <Trash2 />
+                          <span className="sr-only">Remove document</span>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>

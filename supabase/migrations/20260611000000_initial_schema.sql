@@ -134,14 +134,33 @@ create trigger tasks_set_updated_at
   for each row execute function public.set_updated_at();
 
 -- ---------------------------------------------------------------------------
--- documents
+-- document folders and documents
 -- ---------------------------------------------------------------------------
+
+create table public.document_folders (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  case_id uuid not null references public.cases (id) on delete cascade,
+  parent_folder_id uuid references public.document_folders (id) on delete cascade,
+  name text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index document_folders_user_id_idx on public.document_folders (user_id);
+create index document_folders_case_id_idx on public.document_folders (case_id);
+create index document_folders_parent_folder_id_idx on public.document_folders (parent_folder_id);
+
+create trigger document_folders_set_updated_at
+  before update on public.document_folders
+  for each row execute function public.set_updated_at();
 
 create table public.documents (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
-  case_id uuid references public.cases (id) on delete cascade,
+  case_id uuid not null references public.cases (id) on delete cascade,
   client_id uuid references public.clients (id) on delete set null,
+  folder_id uuid references public.document_folders (id) on delete set null,
   file_name text not null,
   file_url text,
   file_path text,
@@ -154,6 +173,7 @@ create table public.documents (
 create index documents_user_id_idx on public.documents (user_id);
 create index documents_case_id_idx on public.documents (case_id);
 create index documents_client_id_idx on public.documents (client_id);
+create index documents_folder_id_idx on public.documents (folder_id);
 
 -- ---------------------------------------------------------------------------
 -- notes
