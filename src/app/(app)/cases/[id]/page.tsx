@@ -12,7 +12,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
-import { CaseDocuments, type CaseDocument } from "./case-documents";
+import {
+  CaseDocuments,
+  type CaseDocument,
+  type DocumentFolder,
+} from "./case-documents";
 import { DeleteCaseButton } from "./delete-case-button";
 
 function formatTime(time: string | null) {
@@ -51,6 +55,7 @@ export default async function CaseDetailPage({
     { data: tasks },
     { data: notes },
     { data: contacts },
+    { data: folderRows },
     { data: documentRows },
   ] = await Promise.all([
     caseRow.client_id
@@ -86,8 +91,14 @@ export default async function CaseDetailPage({
       .eq("user_id", user.id)
       .order("created_at", { ascending: true }),
     supabase
+      .from("document_folders")
+      .select("id, name, parent_folder_id, created_at")
+      .eq("case_id", id)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: true }),
+    supabase
       .from("documents")
-      .select("id, file_name, file_type, uploaded_at, file_path")
+      .select("id, file_name, file_type, folder_id, uploaded_at, file_path")
       .eq("case_id", id)
       .eq("user_id", user.id)
       .order("uploaded_at", { ascending: false }),
@@ -108,11 +119,18 @@ export default async function CaseDetailPage({
         id: doc.id,
         fileName: doc.file_name,
         fileType: doc.file_type,
+        folderId: doc.folder_id,
         uploadedAt: doc.uploaded_at,
         signedUrl,
       };
     })
   );
+
+  const folders: DocumentFolder[] = (folderRows ?? []).map((folder) => ({
+    id: folder.id,
+    name: folder.name,
+    parentFolderId: folder.parent_folder_id,
+  }));
 
   const details: [string, string][] = [
     ["Practice Area", caseRow.practice_area ?? "—"],
@@ -302,7 +320,11 @@ export default async function CaseDetailPage({
           <CardTitle>Documents</CardTitle>
         </CardHeader>
         <CardContent>
-          <CaseDocuments caseId={caseRow.id} documents={documents} />
+          <CaseDocuments
+            caseId={caseRow.id}
+            documents={documents}
+            folders={folders}
+          />
         </CardContent>
       </Card>
     </div>

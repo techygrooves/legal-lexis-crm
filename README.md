@@ -79,9 +79,11 @@ storage policies:
    `supabase/storage/case-documents-policies.sql`, and **Run**. Uploads and
    downloads will fail against a private bucket until these policies exist.
 
-Files are stored under `<user-id>/<case-id>/<filename>` and served through
-short-lived signed URLs. The storage policies scope each user to their own
-folder.
+Files are stored under `<user-id>/<case-id>/<folder-or-root>/<filename>` and
+served through short-lived signed URLs. The storage policies scope each user to
+their own folder. The app also stores case-specific folder records in the
+database so folders can be created and renamed without depending only on
+storage paths.
 
 > **Important:** This protects stored files, but table-level RLS on the
 > `public` schema is still **not** enabled. Until that is added, treat the
@@ -102,10 +104,9 @@ folder.
 
 ## Project notes
 
-- Cases, clients, the case detail page, dashboard counts, case documents, and
-  Settings (account info) run on real Supabase data. The Calendar, Tasks, and
-  standalone Documents pages still render mock data from
-  `src/lib/mock-data.ts`.
+- Cases, clients, the case detail page, dashboard counts, case documents,
+  Calendar, Tasks, standalone Documents, and Settings (account info) run on
+  real Supabase data.
 - Cases can be created (Add Case), edited (`/cases/[id]/edit`), and deleted
   (case detail page). Deleting a case cascades to its events, tasks, notes,
   contacts, and document rows, and removes its stored files.
