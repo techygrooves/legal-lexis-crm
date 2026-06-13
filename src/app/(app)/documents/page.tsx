@@ -1,51 +1,50 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useState } from "react";
-import { Search, Upload } from "lucide-react";
-import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/server";
+import { DocumentsView, type DocumentListItem } from "./documents-view";
 
-import { DocumentList } from "@/components/document-list";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { documents } from "@/lib/mock-data";
+export default async function DocumentsPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-export default function DocumentsPage() {
-  const [query, setQuery] = useState("");
+  const [{ data: documents, error }, { data: cases }] = await Promise.all([
+    supabase
+      .from("documents")
+      .select("id, file_name, file_type, case_id, file_path, uploaded_at")
+      .eq("user_id", user.id)
+      .order("uploaded_at", { ascending: false }),
+    supabase.from("cases").select("id, title").eq("user_id", user.id),
+  ]);
 
-  const filtered = documents.filter(
-    (doc) =>
-      doc.name.toLowerCase().includes(query.toLowerCase()) ||
-      doc.caseTitle.toLowerCase().includes(query.toLowerCase())
+  if (error) {
+    throw new Error(`Failed to load documents: ${error.message}`);
+  }
+
+  const caseTitles = new Map((cases ?? []).map((c) => [c.id, c.title]));
+
+  const items: DocumentListItem[] = await Promise.all(
+    (documents ?? []).map(async (doc) => {
+      let signedUrl: string | null = null;
+      if (doc.file_path) {
+        const { data: signed } = await supabase.storage
+          .from("case-documents")
+          .createSignedUrl(doc.file_path, 60 * 60);
+        signedUrl = signed?.signedUrl ?? null;
+      }
+      return {
+        id: doc.id,
+        fileName: doc.file_name,
+        fileType: doc.file_type,
+        caseId: doc.case_id,
+        caseTitle: doc.case_id ? (caseTitles.get(doc.case_id) ?? "") : "",
+        uploadedAt: doc.uploaded_at,
+        signedUrl,
+      };
+    })
   );
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
-        <Button onClick={() => toast.info("Uploads come with the database hookup.")}>
-          <Upload data-icon="inline-start" />
-          Upload Document
-        </Button>
-      </div>
-
-      <div className="relative w-full sm:max-w-xs">
-        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search documents..."
-          className="pl-9"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </div>
-
-      {filtered.length === 0 ? (
-        <p className="py-12 text-center text-sm text-muted-foreground">
-          No documents match your search.
-        </p>
-      ) : (
-        <DocumentList documents={filtered} layout="grid" />
-      )}
-    </div>
-  );
+  return <DocumentsView documents={items} />;
 }

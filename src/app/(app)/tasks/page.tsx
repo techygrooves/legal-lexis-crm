@@ -1,92 +1,46 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useState } from "react";
-import { format, parseISO } from "date-fns";
-import { Plus } from "lucide-react";
-import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/server";
+import { TasksView, type CaseOption, type TaskItem } from "./tasks-view";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
-import { tasks as initialTasks } from "@/lib/mock-data";
+export default async function TasksPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-export default function TasksPage() {
-  const [tasks, setTasks] = useState(initialTasks);
+  const [{ data: tasks, error }, { data: cases }] = await Promise.all([
+    supabase
+      .from("tasks")
+      .select("id, title, case_id, due_date, status")
+      .eq("user_id", user.id)
+      .order("due_date", { ascending: true, nullsFirst: false }),
+    supabase
+      .from("cases")
+      .select("id, title")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+  ]);
 
-  function toggleTask(id: string) {
-    setTasks((list) =>
-      list.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
+  if (error) {
+    throw new Error(`Failed to load tasks: ${error.message}`);
   }
 
-  const pending = tasks.filter((task) => !task.completed);
-  const completed = tasks.filter((task) => task.completed);
+  const caseTitles = new Map((cases ?? []).map((c) => [c.id, c.title]));
 
-  return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
-        <Button onClick={() => toast.info("Task creation comes with the database hookup.")}>
-          <Plus data-icon="inline-start" />
-          Add Task
-        </Button>
-      </div>
+  const items: TaskItem[] = (tasks ?? []).map((row) => ({
+    id: row.id,
+    title: row.title,
+    caseTitle: row.case_id ? (caseTitles.get(row.case_id) ?? "") : "",
+    dueDate: row.due_date,
+    completed: row.status === "completed",
+  }));
 
-      {[
-        { title: `Pending (${pending.length})`, items: pending },
-        { title: `Completed (${completed.length})`, items: completed },
-      ].map((section) => (
-        <section key={section.title} className="space-y-2">
-          <h2 className="text-sm font-medium text-muted-foreground">
-            {section.title}
-          </h2>
-          <Card>
-            <CardContent className="divide-y px-0 py-0">
-              {section.items.length === 0 && (
-                <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-                  Nothing here.
-                </p>
-              )}
-              {section.items.map((task) => (
-                <label
-                  key={task.id}
-                  className="flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
-                >
-                  <Checkbox
-                    className="mt-0.5"
-                    checked={task.completed}
-                    onCheckedChange={() => toggleTask(task.id)}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span
-                      className={cn(
-                        "block truncate text-sm font-medium",
-                        task.completed && "text-muted-foreground line-through"
-                      )}
-                    >
-                      {task.title}
-                    </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {task.caseTitle}
-                    </span>
-                  </span>
-                  <span
-                    className={cn(
-                      "text-xs font-medium",
-                      task.completed ? "text-muted-foreground" : "text-red-500"
-                    )}
-                  >
-                    Due {format(parseISO(task.dueDate), "MMM d")}
-                  </span>
-                </label>
-              ))}
-            </CardContent>
-          </Card>
-        </section>
-      ))}
-    </div>
-  );
+  const caseOptions: CaseOption[] = (cases ?? []).map((c) => ({
+    id: c.id,
+    title: c.title,
+  }));
+
+  return <TasksView tasks={items} cases={caseOptions} />;
 }
