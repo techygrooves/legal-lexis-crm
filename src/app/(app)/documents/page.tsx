@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
-import { DocumentsView, type DocumentListItem } from "./documents-view";
+import {
+  DocumentsView,
+  type CaseOption,
+  type DocumentFolder,
+  type DocumentListItem,
+} from "./documents-view";
 
 export default async function DocumentsPage() {
   const supabase = await createClient();
@@ -10,13 +15,26 @@ export default async function DocumentsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: documents, error }, { data: cases }] = await Promise.all([
+  const [
+    { data: documents, error },
+    { data: cases },
+    { data: folders },
+  ] = await Promise.all([
     supabase
       .from("documents")
-      .select("id, file_name, file_type, case_id, file_path, uploaded_at")
+      .select("id, file_name, file_type, case_id, folder_id, file_path, uploaded_at")
       .eq("user_id", user.id)
       .order("uploaded_at", { ascending: false }),
-    supabase.from("cases").select("id, title").eq("user_id", user.id),
+    supabase
+      .from("cases")
+      .select("id, title")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("document_folders")
+      .select("id, name, case_id, parent_folder_id")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: true }),
   ]);
 
   if (error) {
@@ -24,6 +42,7 @@ export default async function DocumentsPage() {
   }
 
   const caseTitles = new Map((cases ?? []).map((c) => [c.id, c.title]));
+  const folderNames = new Map((folders ?? []).map((f) => [f.id, f.name]));
 
   const items: DocumentListItem[] = await Promise.all(
     (documents ?? []).map(async (doc) => {
@@ -39,12 +58,32 @@ export default async function DocumentsPage() {
         fileName: doc.file_name,
         fileType: doc.file_type,
         caseId: doc.case_id,
-        caseTitle: doc.case_id ? (caseTitles.get(doc.case_id) ?? "") : "",
+        caseTitle: caseTitles.get(doc.case_id) ?? "",
+        folderId: doc.folder_id,
+        folderName: doc.folder_id ? (folderNames.get(doc.folder_id) ?? "") : "Case root",
         uploadedAt: doc.uploaded_at,
         signedUrl,
       };
     })
   );
 
-  return <DocumentsView documents={items} />;
+  const caseOptions: CaseOption[] = (cases ?? []).map((c) => ({
+    id: c.id,
+    title: c.title,
+  }));
+
+  const folderOptions: DocumentFolder[] = (folders ?? []).map((folder) => ({
+    id: folder.id,
+    name: folder.name,
+    caseId: folder.case_id,
+    parentFolderId: folder.parent_folder_id,
+  }));
+
+  return (
+    <DocumentsView
+      documents={items}
+      cases={caseOptions}
+      folders={folderOptions}
+    />
+  );
 }

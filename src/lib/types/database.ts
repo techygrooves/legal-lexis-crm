@@ -83,8 +83,9 @@ export type TaskRow = {
 export type DocumentRow = {
   id: string;
   user_id: string;
-  case_id: string | null;
+  case_id: string;
   client_id: string | null;
+  folder_id: string | null;
   file_name: string;
   file_url: string | null;
   file_path: string | null;
@@ -92,6 +93,16 @@ export type DocumentRow = {
   document_type: string | null;
   uploaded_at: string;
   created_at: string;
+}
+
+export type DocumentFolderRow = {
+  id: string;
+  user_id: string;
+  case_id: string;
+  parent_folder_id: string | null;
+  name: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export type NoteRow = {
@@ -139,6 +150,7 @@ export type Database = {
       cases: TableOf<CaseRow, "status">;
       case_events: TableOf<CaseEventRow, "event_type">;
       tasks: TableOf<TaskRow, "priority" | "status">;
+      document_folders: TableOf<DocumentFolderRow>;
       documents: TableOf<DocumentRow>;
       notes: TableOf<NoteRow>;
       contacts: TableOf<ContactRow>;
