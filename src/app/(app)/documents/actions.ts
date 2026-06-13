@@ -154,7 +154,10 @@ export async function uploadDocument(
     });
   if (uploadError) {
     return {
-      error: `Upload failed: ${uploadError.message}. Make sure the "${BUCKET}" bucket exists and rerun supabase/storage/case-documents-policies.sql if this mentions row-level security.`,
+      error: [
+        `Upload failed: ${uploadError.message}.`,
+        `Make sure the "${BUCKET}" bucket exists and rerun supabase/storage/case-documents-policies.sql if this mentions row-level security.`,
+      ].join(" "),
     };
   }
 
