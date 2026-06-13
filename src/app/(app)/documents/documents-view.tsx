@@ -19,12 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import {
-  createFolder,
-  deleteDocument,
-  renameFolder,
-  uploadDocument,
-} from "./actions";
+import * as documentActions from "./actions";
 
 export interface DocumentListItem {
   id: string;
@@ -110,7 +105,7 @@ export function DocumentsView({
     if (selectedFolderId) formData.append("folderId", selectedFolderId);
     formData.append("file", file);
 
-    const result = await uploadDocument(formData);
+    const result = await documentActions.uploadDocument(formData);
     setUploading(false);
     if (inputRef.current) inputRef.current.value = "";
 
@@ -125,7 +120,7 @@ export function DocumentsView({
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
-      const result = await createFolder(formData);
+      const result = await documentActions.createFolder(formData);
       if (result.error) {
         toast.error("Could not create folder", { description: result.error });
       } else {
@@ -142,7 +137,7 @@ export function DocumentsView({
 
   function handleDelete(documentId: string) {
     startTransition(async () => {
-      const result = await deleteDocument(documentId);
+      const result = await documentActions.deleteDocument(documentId);
       if (result.error) {
         toast.error("Could not delete document", { description: result.error });
       } else {
@@ -155,7 +150,7 @@ export function DocumentsView({
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
-      const result = await renameFolder(formData);
+      const result = await documentActions.renameFolder(formData);
       if (result.error) {
         toast.error("Could not rename folder", { description: result.error });
       } else {

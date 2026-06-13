@@ -56,6 +56,13 @@ function revalidateDocumentViews(caseId?: string | null) {
   if (caseId) revalidatePath(`/cases/${caseId}`);
 }
 
+function uploadSetupError(message: string) {
+  return [
+    `Upload failed: ${message}.`,
+    `Make sure the "${BUCKET}" bucket exists and rerun supabase/storage/case-documents-policies.sql if this mentions row-level security.`,
+  ].join(" ");
+}
+
 export async function createFolder(formData: FormData): Promise<MutationResult> {
   const { supabase, user } = await getCurrentUser();
   if (!user) return { error: "You must be signed in." };
@@ -151,14 +158,9 @@ export async function uploadDocument(
     .upload(path, file, {
       contentType: file.type || undefined,
       upsert: false,
-    });
+  });
   if (uploadError) {
-    return {
-      error: [
-        `Upload failed: ${uploadError.message}.`,
-        `Make sure the "${BUCKET}" bucket exists and rerun supabase/storage/case-documents-policies.sql if this mentions row-level security.`,
-      ].join(" "),
-    };
+    return { error: uploadSetupError(uploadError.message) };
   }
 
   const { error: insertError } = await supabase.from("documents").insert({
