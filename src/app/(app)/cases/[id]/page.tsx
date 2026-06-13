@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { format, parseISO } from "date-fns";
-import { ArrowLeft, Paperclip } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 
 import { StatusBadge } from "@/components/status-badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -11,6 +12,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
+import { CaseDocuments, type CaseDocument } from "./case-documents";
+import { DeleteCaseButton } from "./delete-case-button";
 
 function formatTime(time: string | null) {
   if (!time) return null;
@@ -48,6 +51,7 @@ export default async function CaseDetailPage({
     { data: tasks },
     { data: notes },
     { data: contacts },
+    { data: documentRows },
   ] = await Promise.all([
     caseRow.client_id
       ? supabase
@@ -81,7 +85,34 @@ export default async function CaseDetailPage({
       .eq("case_id", id)
       .eq("user_id", user.id)
       .order("created_at", { ascending: true }),
+    supabase
+      .from("documents")
+      .select("id, file_name, file_type, uploaded_at, file_path")
+      .eq("case_id", id)
+      .eq("user_id", user.id)
+      .order("uploaded_at", { ascending: false }),
   ]);
+
+  // Private bucket: mint short-lived signed URLs for each document so the
+  // file names can link directly. Missing bucket/policies just yields no link.
+  const documents: CaseDocument[] = await Promise.all(
+    (documentRows ?? []).map(async (doc) => {
+      let signedUrl: string | null = null;
+      if (doc.file_path) {
+        const { data: signed } = await supabase.storage
+          .from("case-documents")
+          .createSignedUrl(doc.file_path, 60 * 60);
+        signedUrl = signed?.signedUrl ?? null;
+      }
+      return {
+        id: doc.id,
+        fileName: doc.file_name,
+        fileType: doc.file_type,
+        uploadedAt: doc.uploaded_at,
+        signedUrl,
+      };
+    })
+  );
 
   const details: [string, string][] = [
     ["Practice Area", caseRow.practice_area ?? "—"],
@@ -114,6 +145,15 @@ export default async function CaseDetailPage({
           {caseRow.title}
         </h1>
         <StatusBadge status={caseRow.status} />
+        <div className="ml-auto flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/cases/${caseRow.id}/edit`}>
+              <Pencil data-icon="inline-start" />
+              Edit
+            </Link>
+          </Button>
+          <DeleteCaseButton caseId={caseRow.id} caseTitle={caseRow.title} />
+        </div>
       </div>
       <p className="text-sm text-muted-foreground">
         Client:{" "}
@@ -262,10 +302,7 @@ export default async function CaseDetailPage({
           <CardTitle>Documents</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-6 text-sm text-muted-foreground">
-            <Paperclip className="size-4" />
-            Document upload will be added later.
-          </div>
+          <CaseDocuments caseId={caseRow.id} documents={documents} />
         </CardContent>
       </Card>
     </div>

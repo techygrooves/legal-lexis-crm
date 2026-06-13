@@ -4,7 +4,12 @@ import Link from "next/link";
 import { useState } from "react";
 import { Bell, Menu, Plus, Search } from "lucide-react";
 
-import { SidebarBrand, SidebarNav, SidebarUser } from "@/components/sidebar";
+import {
+  emailInitials,
+  SidebarBrand,
+  SidebarNav,
+  SidebarUser,
+} from "@/components/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,9 +19,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { attorney } from "@/lib/mock-data";
 
-export function Header() {
+export function Header({ userEmail }: { userEmail: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -33,7 +37,7 @@ export function Header() {
           <div className="flex h-full flex-col">
             <SidebarBrand />
             <SidebarNav onNavigate={() => setMenuOpen(false)} />
-            <SidebarUser />
+            <SidebarUser userEmail={userEmail} />
           </div>
         </SheetContent>
       </Sheet>
@@ -61,10 +65,7 @@ export function Header() {
         </Button>
         <Avatar className="size-8">
           <AvatarFallback className="bg-indigo-100 text-xs font-medium text-indigo-700">
-            {attorney.name
-              .split(" ")
-              .map((n) => n[0])
-              .join("")}
+            {emailInitials(userEmail)}
           </AvatarFallback>
         </Avatar>
       </div>
