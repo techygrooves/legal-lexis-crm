@@ -64,9 +64,20 @@ Email/password auth is enabled by default in new Supabase projects
 confirm their email address before they can sign in. For a quicker solo setup
 you can disable **Confirm email** there instead.
 
-Since this CRM is for one attorney, after creating your own account you can
-disable further sign-ups (**Authentication → Sign In / Up → Allow new users
-to sign up**).
+**Multiple users (separate accounts):** each account gets its own private data
+(everything is scoped per user). To let more than one person use the app, keep
+**Authentication → Sign In / Up → Allow new users to sign up** enabled — anyone
+can then create their own login at `/login`. To lock it down to a single user,
+disable that toggle after creating your account.
+
+**Password reset:** the app has a "Forgot password?" flow (`/forgot-password`).
+For the reset email link to work, add your app's callback URL to
+**Authentication → URL Configuration → Redirect URLs**:
+
+- Local: `http://localhost:3000/auth/callback`
+- Production: `https://YOUR-DOMAIN/auth/callback`
+
+Also set the **Site URL** there to your deployed URL.
 
 ### 5. Storage bucket for documents
 

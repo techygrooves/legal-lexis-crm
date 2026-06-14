@@ -31,16 +31,24 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const isLoginPage = request.nextUrl.pathname.startsWith("/login")
+  const path = request.nextUrl.pathname
+  // Auth pages and the auth callback are reachable without a session.
+  const isPublic =
+    path.startsWith("/login") ||
+    path.startsWith("/forgot-password") ||
+    path.startsWith("/reset-password") ||
+    path.startsWith("/auth")
 
-  if (!user && !isLoginPage) {
+  if (!user && !isPublic) {
     const url = request.nextUrl.clone()
     url.pathname = "/login"
     url.search = ""
     return NextResponse.redirect(url)
   }
 
-  if (user && isLoginPage) {
+  // Already signed in: keep users out of the sign-in page (but allow the
+  // password-reset page, which runs within a recovery session).
+  if (user && path.startsWith("/login")) {
     const url = request.nextUrl.clone()
     url.pathname = "/"
     url.search = ""
