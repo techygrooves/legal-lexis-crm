@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   addDays,
   endOfMonth,
@@ -80,21 +81,35 @@ export function CalendarPreview({
                 {format(day, "d")}
               </span>
               <div className="mt-0.5 space-y-1">
-                {dayEvents.map((event) => (
-                  <div
-                    key={event.id}
-                    title={event.title}
-                    className={cn(
-                      "truncate rounded border px-1.5 py-0.5 text-[11px] leading-4",
-                      eventColors[event.type]
-                    )}
-                  >
-                    {event.startTime && (
-                      <span className="font-medium">{event.startTime} </span>
-                    )}
-                    {event.type}
-                  </div>
-                ))}
+                {dayEvents.map((event) => {
+                  const className = cn(
+                    "block truncate rounded border px-1.5 py-0.5 text-[11px] leading-4",
+                    eventColors[event.type],
+                    event.caseId && "hover:brightness-95"
+                  );
+                  const content = (
+                    <>
+                      {event.startTime && (
+                        <span className="font-medium">{event.startTime} </span>
+                      )}
+                      {event.type}
+                    </>
+                  );
+                  return event.caseId ? (
+                    <Link
+                      key={event.id}
+                      href={`/cases/${event.caseId}`}
+                      title={`${event.title} — open case`}
+                      className={className}
+                    >
+                      {content}
+                    </Link>
+                  ) : (
+                    <div key={event.id} title={event.title} className={className}>
+                      {content}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );

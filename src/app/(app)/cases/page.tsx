@@ -3,7 +3,13 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { CasesList, type CaseListItem } from "./cases-list";
 
-export default async function CasesPage() {
+export default async function CasesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; area?: string }>;
+}) {
+  const { status, area } = await searchParams;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -32,6 +38,7 @@ export default async function CasesPage() {
   const items: CaseListItem[] = (cases ?? []).map((row) => ({
     id: row.id,
     title: row.title,
+    clientId: row.client_id,
     clientName: row.client_id ? (clientNames.get(row.client_id) ?? "") : "",
     practiceArea: row.practice_area ?? "",
     caseNumber: row.case_number ?? "",
@@ -41,5 +48,8 @@ export default async function CasesPage() {
     status: row.status,
   }));
 
-  return <CasesList cases={items} />;
+  const validStatus =
+    status && ["open", "pending", "closed"].includes(status) ? status : "all";
+
+  return <CasesList cases={items} initialStatus={validStatus} area={area ?? ""} />;
 }

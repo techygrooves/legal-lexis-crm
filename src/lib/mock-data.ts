@@ -38,6 +38,7 @@ export interface CalendarEvent {
   endTime?: string;
   type: EventType;
   location?: string;
+  caseId?: string | null;
 }
 
 export interface Task {

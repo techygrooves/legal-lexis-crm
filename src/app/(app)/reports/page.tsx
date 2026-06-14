@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { format } from "date-fns";
 import {
@@ -25,7 +26,7 @@ function Breakdown({
   rows,
   emptyLabel,
 }: {
-  rows: { label: string; count: number }[];
+  rows: { label: string; count: number; href?: string }[];
   emptyLabel: string;
 }) {
   if (rows.length === 0) {
@@ -34,22 +35,37 @@ function Breakdown({
   const max = Math.max(...rows.map((r) => r.count), 1);
   return (
     <div className="space-y-3">
-      {rows.map((row) => (
-        <div key={row.label} className="space-y-1">
-          <div className="flex items-center justify-between text-sm">
-            <span className="truncate">{row.label}</span>
-            <span className="shrink-0 font-medium tabular-nums">
-              {row.count}
-            </span>
+      {rows.map((row) => {
+        const inner = (
+          <>
+            <div className="flex items-center justify-between text-sm">
+              <span className="truncate">{row.label}</span>
+              <span className="shrink-0 font-medium tabular-nums">
+                {row.count}
+              </span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-indigo-500"
+                style={{ width: `${(row.count / max) * 100}%` }}
+              />
+            </div>
+          </>
+        );
+        return row.href ? (
+          <Link
+            key={row.label}
+            href={row.href}
+            className="block space-y-1 transition-opacity hover:opacity-80"
+          >
+            {inner}
+          </Link>
+        ) : (
+          <div key={row.label} className="space-y-1">
+            {inner}
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-indigo-500"
-              style={{ width: `${(row.count / max) * 100}%` }}
-            />
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -108,47 +124,63 @@ export default async function ReportsPage() {
       .sort((a, b) => b.count - a.count);
   };
 
-  const casesByStatus = countBy(caseRows, (c) => titleCase(c.status));
-  const casesByPracticeArea = countBy(caseRows, (c) => c.practice_area);
-  const tasksByStatus = countBy(taskRows, (t) => titleCase(t.status));
+  const casesByStatus = countBy(caseRows, (c) => titleCase(c.status)).map(
+    (r) => ({ ...r, href: `/cases?status=${r.label.toLowerCase()}` })
+  );
+  const casesByPracticeArea = countBy(caseRows, (c) => c.practice_area).map(
+    (r) => ({ ...r, href: `/cases?area=${encodeURIComponent(r.label)}` })
+  );
+  const tasksByStatus = countBy(taskRows, (t) => titleCase(t.status)).map(
+    (r) => ({ ...r, href: "/tasks" })
+  );
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <StatCard
-          label="Total Clients"
-          value={clientRows.length}
-          change={`${activeClients} active`}
-          icon={Users}
-        />
-        <StatCard
-          label="Total Cases"
-          value={caseRows.length}
-          change={`${openCases} open`}
-          icon={FolderClosed}
-        />
-        <StatCard
-          label="Pending Tasks"
-          value={pendingTasks}
-          change={`${taskRows.length} total`}
-          icon={ListChecks}
-          iconClassName="bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400"
-        />
-        <StatCard
-          label="Upcoming Deadlines"
-          value={upcomingDeadlines ?? 0}
-          change="From today"
-          icon={CalendarClock}
-          iconClassName="bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400"
-        />
-        <StatCard
-          label="Documents"
-          value={documentCount ?? 0}
-          icon={FileText}
-          iconClassName="bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
-        />
+        <Link href="/clients" className="block transition-opacity hover:opacity-90">
+          <StatCard
+            label="Total Clients"
+            value={clientRows.length}
+            change={`${activeClients} active`}
+            icon={Users}
+          />
+        </Link>
+        <Link href="/cases" className="block transition-opacity hover:opacity-90">
+          <StatCard
+            label="Total Cases"
+            value={caseRows.length}
+            change={`${openCases} open`}
+            icon={FolderClosed}
+          />
+        </Link>
+        <Link href="/tasks" className="block transition-opacity hover:opacity-90">
+          <StatCard
+            label="Pending Tasks"
+            value={pendingTasks}
+            change={`${taskRows.length} total`}
+            icon={ListChecks}
+            iconClassName="bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400"
+          />
+        </Link>
+        <Link href="/calendar" className="block transition-opacity hover:opacity-90">
+          <StatCard
+            label="Upcoming Deadlines"
+            value={upcomingDeadlines ?? 0}
+            change="From today"
+            icon={CalendarClock}
+            iconClassName="bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400"
+          />
+        </Link>
+        <Link href="/documents" className="block transition-opacity hover:opacity-90">
+          <StatCard
+            label="Documents"
+            value={documentCount ?? 0}
+            icon={FileText}
+            iconClassName="bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
+          />
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
