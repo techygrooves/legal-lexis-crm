@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ArrowLeft, Loader2, Paperclip, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { practiceAreas } from "@/lib/mock-data";
+import { uploadDocument } from "@/app/(app)/documents/actions";
 import { createCase } from "./actions";
 
 interface ImportantDate {
@@ -66,7 +67,9 @@ function Field({
 
 export default function AddCasePage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
   const [importantDates, setImportantDates] = useState<ImportantDate[]>([
     { label: "", type: "hearing", date: "" },
   ]);
@@ -118,18 +121,47 @@ export default function AddCasePage() {
       contacts: contactList,
     });
 
-    if (result.error) {
+    if (result.error || !result.caseId) {
       toast.error("Could not create case", { description: result.error });
       setSubmitting(false);
       return;
     }
 
+    const caseId = result.caseId;
+
+    // Documents attach to the case we just created (uploaded to its root
+    // folder). This works whether or not a case number was provided.
+    let uploadFailures = 0;
+    for (const file of files) {
+      const documentData = new FormData();
+      documentData.append("caseId", caseId);
+      documentData.append("file", file);
+      const upload = await uploadDocument(documentData);
+      if (upload.error) uploadFailures += 1;
+    }
+
     if (result.warning) {
       toast.warning(result.warning);
+    } else if (uploadFailures > 0) {
+      toast.warning(
+        `Case created, but ${uploadFailures} document${
+          uploadFailures > 1 ? "s" : ""
+        } could not be uploaded.`
+      );
     } else {
       toast.success("Case created");
     }
-    router.push(`/cases/${result.caseId}`);
+    router.push(`/cases/${caseId}`);
+  }
+
+  function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(e.target.files ?? []);
+    if (selected.length > 0) setFiles((prev) => [...prev, ...selected]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function removeFile(index: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
   return (
@@ -510,12 +542,55 @@ export default function AddCasePage() {
                 placeholder="Case strategy, background, first impressions..."
               />
             </Field>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label>Documents</Label>
-              <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-6 text-sm text-muted-foreground opacity-60">
-                <Paperclip className="size-4" />
-                Document upload will be added later.
-              </div>
+              <p className="text-xs text-muted-foreground">
+                Files attach to this case (uploaded to the case root folder).
+                You can organize them into folders on the case page afterward.
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="sr-only"
+                onChange={handleFilesSelected}
+                disabled={submitting}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={submitting}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Paperclip data-icon="inline-start" />
+                Choose Files
+              </Button>
+              {files.length > 0 && (
+                <ul className="space-y-2 pt-1">
+                  {files.map((file, index) => (
+                    <li
+                      key={`${file.name}-${index}`}
+                      className="flex items-center gap-3 rounded-lg border px-3 py-2 text-sm"
+                    >
+                      <Paperclip className="size-4 shrink-0 text-muted-foreground" />
+                      <span className="min-w-0 flex-1 truncate">
+                        {file.name}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        disabled={submitting}
+                        onClick={() => removeFile(index)}
+                      >
+                        <Trash2 />
+                        <span className="sr-only">Remove file</span>
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </CardContent>
         </Card>

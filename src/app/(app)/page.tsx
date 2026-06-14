@@ -4,6 +4,8 @@ import { format, parseISO } from "date-fns";
 import {
   CalendarCheck,
   ChevronRight,
+  FileImage,
+  FileText,
   FolderClosed,
   ListChecks,
   Users,
@@ -14,6 +16,7 @@ import { StatCard } from "@/components/stat-card";
 import { StatusBadge } from "@/components/status-badge";
 import {
   Card,
+  CardAction,
   CardContent,
   CardHeader,
   CardTitle,
@@ -50,6 +53,8 @@ export default async function DashboardPage() {
     { data: upcomingEvents },
     { data: recentCases },
     { data: pendingTasks },
+    { data: recentDocuments },
+    { data: caseTitleRows },
   ] = await Promise.all([
     supabase
       .from("clients")
@@ -90,7 +95,60 @@ export default async function DashboardPage() {
       .eq("status", "pending")
       .order("due_date", { ascending: true, nullsFirst: false })
       .limit(4),
+    supabase
+      .from("documents")
+      .select("id, file_name, file_type, case_id, file_path, uploaded_at")
+      .eq("user_id", user.id)
+      .order("uploaded_at", { ascending: false })
+      .limit(4),
+    supabase.from("cases").select("id, title").eq("user_id", user.id),
   ]);
+
+  const caseTitleById = new Map(
+    (caseTitleRows ?? []).map((row) => [row.id, row.title])
+  );
+
+  const recentDocs = await Promise.all(
+    (recentDocuments ?? []).map(async (doc) => {
+      let signedUrl: string | null = null;
+      if (doc.file_path) {
+        const { data: signed } = await supabase.storage
+          .from("case-documents")
+          .createSignedUrl(doc.file_path, 60 * 60);
+        signedUrl = signed?.signedUrl ?? null;
+      }
+      return {
+        id: doc.id,
+        fileName: doc.file_name,
+        fileType: doc.file_type,
+        caseId: doc.case_id,
+        caseTitle: doc.case_id ? (caseTitleById.get(doc.case_id) ?? "") : "",
+        uploadedAt: doc.uploaded_at,
+        signedUrl,
+      };
+    })
+  );
+
+  const docIcon = (fileType: string | null) => {
+    if (fileType?.startsWith("image/")) {
+      return {
+        Icon: FileImage,
+        className:
+          "bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400",
+      };
+    }
+    if (fileType === "application/pdf") {
+      return {
+        Icon: FileText,
+        className:
+          "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400",
+      };
+    }
+    return {
+      Icon: FileText,
+      className: "bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400",
+    };
+  };
 
   const formatTime = (time: string | null) => {
     if (!time) return null;
@@ -229,11 +287,64 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>Recent Documents</CardTitle>
+          <CardAction>
+            <ViewAllLink href="/documents" label="View All Documents" />
+          </CardAction>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">
-            No documents yet. Document upload will be added later.
-          </p>
+          {recentDocs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No documents yet. Upload documents from a case page.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {recentDocs.map((doc) => {
+                const { Icon, className } = docIcon(doc.fileType);
+                return (
+                  <div
+                    key={doc.id}
+                    className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5"
+                  >
+                    <span
+                      className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${className}`}
+                    >
+                      <Icon className="size-4.5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      {doc.signedUrl ? (
+                        <a
+                          href={doc.signedUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block truncate text-sm font-medium hover:underline"
+                        >
+                          {doc.fileName}
+                        </a>
+                      ) : (
+                        <p className="truncate text-sm font-medium">
+                          {doc.fileName}
+                        </p>
+                      )}
+                      <p className="truncate text-xs text-muted-foreground">
+                        {doc.caseId ? (
+                          <Link
+                            href={`/cases/${doc.caseId}`}
+                            className="hover:underline"
+                          >
+                            {doc.caseTitle || "View case"}
+                          </Link>
+                        ) : (
+                          doc.caseTitle
+                        )}
+                        {" · "}
+                        {format(parseISO(doc.uploadedAt), "MMM d, yyyy")}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
