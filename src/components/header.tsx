@@ -20,7 +20,13 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-export function Header({ userEmail }: { userEmail: string }) {
+export function Header({
+  userEmail,
+  displayName = "",
+}: {
+  userEmail: string;
+  displayName?: string;
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -37,7 +43,7 @@ export function Header({ userEmail }: { userEmail: string }) {
           <div className="flex h-full flex-col">
             <SidebarBrand />
             <SidebarNav onNavigate={() => setMenuOpen(false)} />
-            <SidebarUser userEmail={userEmail} />
+            <SidebarUser userEmail={userEmail} displayName={displayName} />
           </div>
         </SheetContent>
       </Sheet>
@@ -65,7 +71,7 @@ export function Header({ userEmail }: { userEmail: string }) {
         </Button>
         <Avatar className="size-8">
           <AvatarFallback className="bg-indigo-100 text-xs font-medium text-indigo-700">
-            {emailInitials(userEmail)}
+            {emailInitials(displayName || userEmail)}
           </AvatarFallback>
         </Avatar>
       </div>

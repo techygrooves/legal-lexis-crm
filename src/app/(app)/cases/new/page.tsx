@@ -32,6 +32,7 @@ interface ImportantDate {
   label: string;
   type: string;
   date: string;
+  time: string;
 }
 
 interface TaskEntry {
@@ -71,7 +72,7 @@ export default function AddCasePage() {
   const [submitting, setSubmitting] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [importantDates, setImportantDates] = useState<ImportantDate[]>([
-    { label: "", type: "hearing", date: "" },
+    { label: "", type: "hearing", date: "", time: "" },
   ]);
   const [taskList, setTaskList] = useState<TaskEntry[]>([
     { title: "", dueDate: "" },
@@ -117,6 +118,7 @@ export default function AddCasePage() {
         title: entry.label,
         eventType: entry.type,
         eventDate: entry.date,
+        startTime: entry.time,
       })),
       tasks: taskList.map((task) => ({
         title: task.title,
@@ -346,6 +348,21 @@ export default function AddCasePage() {
                     }
                   />
                 </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`date-time-${index}`}>Time</Label>
+                  <Input
+                    id={`date-time-${index}`}
+                    type="time"
+                    value={entry.time}
+                    onChange={(e) =>
+                      setImportantDates((dates) =>
+                        dates.map((d, i) =>
+                          i === index ? { ...d, time: e.target.value } : d
+                        )
+                      )
+                    }
+                  />
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
@@ -369,7 +386,7 @@ export default function AddCasePage() {
               onClick={() =>
                 setImportantDates((dates) => [
                   ...dates,
-                  { label: "", type: "hearing", date: "" },
+                  { label: "", type: "hearing", date: "", time: "" },
                 ])
               }
             >

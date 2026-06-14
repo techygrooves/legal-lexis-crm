@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
+import { DisplayNameForm } from "./display-name-form";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -16,6 +17,11 @@ export default async function SettingsPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const displayName =
+    typeof user.user_metadata?.display_name === "string"
+      ? user.user_metadata.display_name
+      : "";
 
   const accountRows: [string, string][] = [
     ["Email", user.email ?? "—"],
@@ -62,15 +68,7 @@ export default async function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile &amp; Preferences</CardTitle>
-          <CardDescription>
-            Editable firm name, default court, and time zone will be added in a
-            later update. Your sign-in email above is your account identity.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <DisplayNameForm initialName={displayName} />
     </div>
   );
 }

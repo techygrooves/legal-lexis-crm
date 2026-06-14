@@ -6,6 +6,7 @@ const statusStyles: Record<string, string> = {
   Pending: "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-400",
   Closed: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
   Inactive: "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400",
+  Prospect: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
   Hearing: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400",
   Meeting: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
   Deadline: "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400",

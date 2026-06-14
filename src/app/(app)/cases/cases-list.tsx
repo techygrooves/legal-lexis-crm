@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
-import { Plus, Search, X } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 
 import { DataTable, type Column } from "@/components/data-table";
 import { StatusBadge } from "@/components/status-badge";
@@ -29,6 +29,7 @@ export interface CaseListItem {
   judgeName: string;
   filedDate: string | null;
   status: string;
+  hasUpcomingEvent: boolean;
 }
 
 const columns: Column<CaseListItem>[] = [
@@ -107,6 +108,12 @@ export function CasesList({
 }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState(initialStatus);
+  const [practiceArea, setPracticeArea] = useState(area || "all");
+  const [eventFilter, setEventFilter] = useState("all");
+
+  const practiceAreas = [
+    ...new Set(cases.map((c) => c.practiceArea).filter(Boolean)),
+  ].sort();
 
   const filtered = cases.filter((caseItem) => {
     const q = query.toLowerCase();
@@ -118,8 +125,13 @@ export function CasesList({
       caseItem.judgeName.toLowerCase().includes(q);
     const matchesStatus =
       status === "all" || caseItem.status.toLowerCase() === status;
-    const matchesArea = !area || caseItem.practiceArea === area;
-    return matchesQuery && matchesStatus && matchesArea;
+    const matchesArea =
+      practiceArea === "all" || caseItem.practiceArea === practiceArea;
+    const matchesEvent =
+      eventFilter === "all" ||
+      (eventFilter === "upcoming" && caseItem.hasUpcomingEvent) ||
+      (eventFilter === "none" && !caseItem.hasUpcomingEvent);
+    return matchesQuery && matchesStatus && matchesArea && matchesEvent;
   });
 
   return (
@@ -134,7 +146,7 @@ export function CasesList({
         </Button>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <div className="relative w-full sm:max-w-xs">
           <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -156,14 +168,29 @@ export function CasesList({
             <SelectItem value="closed">Closed</SelectItem>
           </SelectContent>
         </Select>
-        {area && (
-          <Button asChild variant="secondary" size="sm">
-            <Link href="/cases">
-              {area}
-              <X data-icon="inline-end" />
-            </Link>
-          </Button>
-        )}
+        <Select value={practiceArea} onValueChange={setPracticeArea}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="All Practice Areas" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Practice Areas</SelectItem>
+            {practiceAreas.map((pa) => (
+              <SelectItem key={pa} value={pa}>
+                {pa}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={eventFilter} onValueChange={setEventFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Events</SelectItem>
+            <SelectItem value="upcoming">Has upcoming event</SelectItem>
+            <SelectItem value="none">No upcoming event</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <Card>

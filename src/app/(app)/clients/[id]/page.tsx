@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { format, parseISO } from "date-fns";
 import { ArrowLeft } from "lucide-react";
 
 import { CaseCard } from "@/components/case-card";
@@ -12,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
+import { DeleteClientButton } from "../delete-client-button";
 
 export default async function ClientDetailPage({
   params,
@@ -42,17 +42,20 @@ export default async function ClientDetailPage({
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
+  const caseList = cases ?? [];
+  const derivedStatus = caseList.some(
+    (c) => c.status === "open" || c.status === "pending"
+  )
+    ? "Active"
+    : caseList.length > 0
+      ? "Closed"
+      : "Prospect";
+
   const details: [string, string][] = [
     ["Email", client.email ?? "—"],
     ["Phone", client.phone ?? "—"],
     ["Address", client.address ?? "—"],
     ["Source", client.source ?? "—"],
-    [
-      "Client Since",
-      client.created_at
-        ? format(parseISO(client.created_at), "MMMM d, yyyy")
-        : "—",
-    ],
   ];
 
   return (
@@ -69,7 +72,15 @@ export default async function ClientDetailPage({
         <h1 className="text-2xl font-semibold tracking-tight">
           {client.full_name}
         </h1>
-        <StatusBadge status={client.status} />
+        <StatusBadge status={derivedStatus} />
+        <div className="ml-auto">
+          <DeleteClientButton
+            clientId={client.id}
+            clientName={client.full_name}
+            variant="labeled"
+            redirectTo="/clients"
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -102,15 +113,15 @@ export default async function ClientDetailPage({
 
         <Card>
           <CardHeader>
-            <CardTitle>Cases ({(cases ?? []).length})</CardTitle>
+            <CardTitle>Cases ({caseList.length})</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {(cases ?? []).length === 0 ? (
+            {caseList.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No cases for this client yet.
               </p>
             ) : (
-              (cases ?? []).map((caseRow) => (
+              caseList.map((caseRow) => (
                 <CaseCard
                   key={caseRow.id}
                   caseItem={{

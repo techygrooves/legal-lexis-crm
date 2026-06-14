@@ -30,7 +30,12 @@ export interface CreateCasePayload {
     status: string;
     filedDate: string;
   };
-  events: { title: string; eventType: string; eventDate: string }[];
+  events: {
+    title: string;
+    eventType: string;
+    eventDate: string;
+    startTime: string;
+  }[];
   tasks: { title: string; dueDate: string }[];
   note: string;
   contacts: { name: string; role: string; email: string; phone: string }[];
@@ -132,7 +137,7 @@ export async function createCase(
       title: event.title.trim(),
       event_type: event.eventType || "meeting",
       event_date: event.eventDate,
-      start_time: null,
+      start_time: orNull(event.startTime),
       end_time: null,
       location: null,
       notes: null,
