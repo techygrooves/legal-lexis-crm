@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Loader2, Scale } from "lucide-react";
@@ -132,6 +133,17 @@ export default function LoginPage() {
               <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
                 {info}
               </p>
+            )}
+
+            {mode === "signin" && (
+              <div className="text-right">
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-indigo-600 hover:underline dark:text-indigo-400"
+                >
+                  Forgot password?
+                </Link>
+              </div>
             )}
 
             <Button type="submit" className="w-full" disabled={loading}>

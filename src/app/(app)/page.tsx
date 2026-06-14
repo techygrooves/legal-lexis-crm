@@ -78,11 +78,11 @@ export default async function DashboardPage() {
       .eq("status", "pending"),
     supabase
       .from("case_events")
-      .select("id, title, event_type, event_date, start_time, end_time, location")
+      .select("id, title, event_type, event_date, start_time, end_time, location, case_id")
       .eq("user_id", user.id)
       .gte("event_date", today)
       .order("event_date", { ascending: true })
-      .limit(3),
+      .limit(5),
     supabase
       .from("cases")
       .select("id, title, court_name, status")
@@ -118,7 +118,11 @@ export default async function DashboardPage() {
       map.set(row.practice_area, (map.get(row.practice_area) ?? 0) + 1);
     }
     const rows = [...map.entries()]
-      .map(([label, count]) => ({ label, count }))
+      .map(([label, count]) => ({
+        label,
+        count,
+        href: `/cases?area=${encodeURIComponent(label)}`,
+      }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
     const max = Math.max(...rows.map((r) => r.count), 1);
@@ -184,29 +188,33 @@ export default async function DashboardPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Total Clients"
-          value={clientCount ?? 0}
-          icon={Users}
-        />
-        <StatCard
-          label="Open Cases"
-          value={openCaseCount ?? 0}
-          icon={FolderClosed}
-        />
-        <StatCard
-          label="Upcoming Events"
-          value={upcomingEventCount ?? 0}
-          change="From today"
-          icon={CalendarCheck}
-          iconClassName="bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
-        />
-        <StatCard
-          label="Pending Tasks"
-          value={pendingTaskCount ?? 0}
-          icon={ListChecks}
-          iconClassName="bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400"
-        />
+        <Link href="/clients" className="block transition-opacity hover:opacity-90">
+          <StatCard label="Total Clients" value={clientCount ?? 0} icon={Users} />
+        </Link>
+        <Link href="/cases?status=open" className="block transition-opacity hover:opacity-90">
+          <StatCard
+            label="Open Cases"
+            value={openCaseCount ?? 0}
+            icon={FolderClosed}
+          />
+        </Link>
+        <Link href="/calendar" className="block transition-opacity hover:opacity-90">
+          <StatCard
+            label="Upcoming Events"
+            value={upcomingEventCount ?? 0}
+            change="From today"
+            icon={CalendarCheck}
+            iconClassName="bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
+          />
+        </Link>
+        <Link href="/tasks" className="block transition-opacity hover:opacity-90">
+          <StatCard
+            label="Pending Tasks"
+            value={pendingTaskCount ?? 0}
+            icon={ListChecks}
+            iconClassName="bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400"
+          />
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -220,33 +228,52 @@ export default async function DashboardPage() {
                 No upcoming events.
               </p>
             )}
-            {(upcomingEvents ?? []).map((event) => (
-              <div key={event.id} className="flex items-start gap-3">
-                <div className="flex w-11 shrink-0 flex-col items-center rounded-lg border py-1.5">
-                  <span className="text-[10px] font-medium text-red-500 uppercase">
-                    {format(parseISO(event.event_date), "MMM")}
-                  </span>
-                  <span className="text-base leading-5 font-semibold">
-                    {format(parseISO(event.event_date), "d")}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {format(parseISO(event.event_date), "EEE")}
-                  </span>
+            {(upcomingEvents ?? []).map((event) => {
+              const caseTitle = event.case_id
+                ? caseTitleById.get(event.case_id)
+                : undefined;
+              const inner = (
+                <>
+                  <div className="flex w-11 shrink-0 flex-col items-center rounded-lg border py-1.5">
+                    <span className="text-[10px] font-medium text-red-500 uppercase">
+                      {format(parseISO(event.event_date), "MMM")}
+                    </span>
+                    <span className="text-base leading-5 font-semibold">
+                      {format(parseISO(event.event_date), "d")}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {format(parseISO(event.event_date), "EEE")}
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{event.title}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {event.start_time
+                        ? `${formatTime(event.start_time)}${
+                            event.end_time ? ` - ${formatTime(event.end_time)}` : ""
+                          }`
+                        : "All day"}
+                      {event.location && ` · ${event.location}`}
+                      {caseTitle && ` · ${caseTitle}`}
+                    </p>
+                  </div>
+                  <StatusBadge status={event.event_type} />
+                </>
+              );
+              return event.case_id ? (
+                <Link
+                  key={event.id}
+                  href={`/cases/${event.case_id}`}
+                  className="-mx-1 flex items-start gap-3 rounded-lg px-1 py-0.5 transition-colors hover:bg-muted/50"
+                >
+                  {inner}
+                </Link>
+              ) : (
+                <div key={event.id} className="flex items-start gap-3">
+                  {inner}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{event.title}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {event.start_time
-                      ? `${formatTime(event.start_time)}${
-                          event.end_time ? ` - ${formatTime(event.end_time)}` : ""
-                        }`
-                      : "All day"}
-                    {event.location && ` · ${event.location}`}
-                  </p>
-                </div>
-                <StatusBadge status={event.event_type} />
-              </div>
-            ))}
+              );
+            })}
             <ViewAllLink href="/calendar" label="View Calendar" />
           </CardContent>
         </Card>
@@ -318,7 +345,11 @@ export default async function DashboardPage() {
             ) : (
               <div className="space-y-3">
                 {practiceAreaBreakdown.rows.map((row) => (
-                  <div key={row.label} className="space-y-1">
+                  <Link
+                    key={row.label}
+                    href={row.href}
+                    className="block space-y-1 transition-opacity hover:opacity-80"
+                  >
                     <div className="flex items-center justify-between text-sm">
                       <span className="truncate">{row.label}</span>
                       <span className="shrink-0 font-medium tabular-nums">
@@ -333,7 +364,7 @@ export default async function DashboardPage() {
                         }}
                       />
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

@@ -212,6 +212,9 @@ export const practiceAreas = [
   "Early Termination of Probation",
   "Security Deposit",
   "Mugshot Removal",
+  "Civil",
+  "Small Claims",
+  "Others",
 ];
 
 export const attorney = {
