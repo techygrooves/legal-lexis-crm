@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
+  BarChart3,
   Calendar,
+  Contact,
   FileText,
   FolderClosed,
   LayoutDashboard,
@@ -12,6 +14,7 @@ import {
   LogOut,
   Scale,
   Settings,
+  StickyNote,
   Users,
 } from "lucide-react";
 
@@ -33,6 +36,9 @@ export const navItems = [
   { label: "Calendar", href: "/calendar", icon: Calendar },
   { label: "Tasks", href: "/tasks", icon: ListChecks },
   { label: "Documents", href: "/documents", icon: FileText },
+  { label: "Notes", href: "/notes", icon: StickyNote },
+  { label: "Contacts", href: "/contacts", icon: Contact },
+  { label: "Reports", href: "/reports", icon: BarChart3 },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 

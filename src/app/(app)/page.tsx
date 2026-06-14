@@ -55,6 +55,7 @@ export default async function DashboardPage() {
     { data: pendingTasks },
     { data: recentDocuments },
     { data: caseTitleRows },
+    { data: recentNotes },
   ] = await Promise.all([
     supabase
       .from("clients")
@@ -101,8 +102,28 @@ export default async function DashboardPage() {
       .eq("user_id", user.id)
       .order("uploaded_at", { ascending: false })
       .limit(4),
-    supabase.from("cases").select("id, title").eq("user_id", user.id),
+    supabase.from("cases").select("id, title, practice_area").eq("user_id", user.id),
+    supabase
+      .from("notes")
+      .select("id, note, case_id, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(3),
   ]);
+
+  const practiceAreaBreakdown = (() => {
+    const map = new Map<string, number>();
+    for (const row of caseTitleRows ?? []) {
+      if (!row.practice_area) continue;
+      map.set(row.practice_area, (map.get(row.practice_area) ?? 0) + 1);
+    }
+    const rows = [...map.entries()]
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+    const max = Math.max(...rows.map((r) => r.count), 1);
+    return { rows, max };
+  })();
 
   const caseTitleById = new Map(
     (caseTitleRows ?? []).map((row) => [row.id, row.title])
@@ -280,6 +301,69 @@ export default async function DashboardPage() {
               </div>
             ))}
             <ViewAllLink href="/tasks" label="View All Tasks" />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Cases by Practice Area</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {practiceAreaBreakdown.rows.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No practice areas recorded yet.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {practiceAreaBreakdown.rows.map((row) => (
+                  <div key={row.label} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="truncate">{row.label}</span>
+                      <span className="shrink-0 font-medium tabular-nums">
+                        {row.count}
+                      </span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-indigo-500"
+                        style={{
+                          width: `${(row.count / practiceAreaBreakdown.max) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Notes</CardTitle>
+            <CardAction>
+              <ViewAllLink href="/notes" label="View All Notes" />
+            </CardAction>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {(recentNotes ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">No notes yet.</p>
+            ) : (
+              (recentNotes ?? []).map((note) => (
+                <div key={note.id} className="border-b pb-2 last:border-b-0">
+                  <p className="line-clamp-2 text-sm">{note.note}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {note.case_id
+                      ? caseTitleById.get(note.case_id) ?? "General"
+                      : "General"}
+                    {" · "}
+                    {format(parseISO(note.created_at), "MMM d, yyyy")}
+                  </p>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>
