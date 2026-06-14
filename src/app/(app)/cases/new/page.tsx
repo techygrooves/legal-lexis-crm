@@ -105,6 +105,11 @@ export default function AddCasePage() {
         judgeName: field("judgeName"),
         opposingParty: field("opposingParty"),
         opposingAttorney: field("opposingAttorney"),
+        stateAttorney: field("stateAttorney"),
+        stateAttorneyPhone: field("stateAttorneyPhone"),
+        charge: field("charge"),
+        insuranceCompany: field("insuranceCompany"),
+        insuranceAgentPhone: field("insuranceAgentPhone"),
         status: field("caseStatus"),
         filedDate: field("filedDate"),
       },
@@ -243,6 +248,21 @@ export default function AddCasePage() {
             </Field>
             <Field id="opposing-attorney" label="Opposing Attorney">
               <Input id="opposing-attorney" name="opposingAttorney" placeholder="John Counsel, Esq." />
+            </Field>
+            <Field id="state-attorney" label="State Attorney">
+              <Input id="state-attorney" name="stateAttorney" placeholder="Prosecutor name" />
+            </Field>
+            <Field id="state-attorney-phone" label="State Attorney Phone">
+              <Input id="state-attorney-phone" name="stateAttorneyPhone" type="tel" placeholder="(555) 000-0000" />
+            </Field>
+            <Field id="charge" label="Charge">
+              <Input id="charge" name="charge" placeholder="e.g. DUI - first offense" />
+            </Field>
+            <Field id="insurance-company" label="Insurance Company">
+              <Input id="insurance-company" name="insuranceCompany" placeholder="Insurance company name" />
+            </Field>
+            <Field id="insurance-agent-phone" label="Insurance Agent Phone">
+              <Input id="insurance-agent-phone" name="insuranceAgentPhone" type="tel" placeholder="(555) 000-0000" />
             </Field>
             <Field id="case-status" label="Case Status">
               <Select name="caseStatus" defaultValue="open">

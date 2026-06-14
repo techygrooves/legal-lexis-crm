@@ -204,6 +204,13 @@ export const practiceAreas = [
   "Contract Law",
   "Family Law",
   "Personal Injury",
+  "DUI Defense",
+  "Assault and Battery",
+  "Injunctions",
+  "Expunge and Seal Records",
+  "Early Termination of Probation",
+  "Security Deposit",
+  "Mugshot Removal",
 ];
 
 export const attorney = {
