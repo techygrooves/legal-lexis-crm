@@ -22,10 +22,18 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
-// Derive avatar initials from the signed-in user's email (e.g.
-// "jane.doe@firm.com" -> "JA"). Falls back to "U" for an empty value.
-export function emailInitials(email: string) {
-  const local = email.split("@")[0].replace(/[^a-zA-Z]/g, "");
+// Derive avatar initials. For a full name ("David Hoffman" -> "DH") uses the
+// first letters of the first two words; for an email uses the first two
+// letters of the local part. Falls back to "U" for an empty value.
+export function emailInitials(value: string) {
+  const trimmed = value.trim();
+  if (trimmed.includes(" ")) {
+    const parts = trimmed.split(/\s+/);
+    return (
+      ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "U"
+    );
+  }
+  const local = trimmed.split("@")[0].replace(/[^a-zA-Z]/g, "");
   return (local.slice(0, 2) || "U").toUpperCase();
 }
 
@@ -85,7 +93,13 @@ export function SidebarBrand() {
   );
 }
 
-export function SidebarUser({ userEmail }: { userEmail: string }) {
+export function SidebarUser({
+  userEmail,
+  displayName = "",
+}: {
+  userEmail: string;
+  displayName?: string;
+}) {
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
 
@@ -97,18 +111,19 @@ export function SidebarUser({ userEmail }: { userEmail: string }) {
     router.refresh();
   }
 
+  const primary = displayName || userEmail || "Signed in";
+  const secondary = displayName ? userEmail : "Solo Attorney";
+
   return (
     <div className="flex items-center gap-3 border-t border-white/10 px-5 py-4 md:justify-center md:px-2 lg:justify-start lg:px-5">
       <Avatar className="size-8 md:hidden lg:flex">
         <AvatarFallback className="bg-zinc-700 text-xs text-white">
-          {emailInitials(userEmail)}
+          {emailInitials(displayName || userEmail)}
         </AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1 lg:block md:hidden">
-        <p className="truncate text-sm font-medium text-white">
-          {userEmail || "Signed in"}
-        </p>
-        <p className="text-xs text-zinc-400">Solo Attorney</p>
+        <p className="truncate text-sm font-medium text-white">{primary}</p>
+        <p className="truncate text-xs text-zinc-400">{secondary}</p>
       </div>
       <button
         type="button"
@@ -124,12 +139,18 @@ export function SidebarUser({ userEmail }: { userEmail: string }) {
   );
 }
 
-export function Sidebar({ userEmail }: { userEmail: string }) {
+export function Sidebar({
+  userEmail,
+  displayName = "",
+}: {
+  userEmail: string;
+  displayName?: string;
+}) {
   return (
     <aside className="sticky top-0 hidden h-svh w-16 shrink-0 flex-col bg-zinc-900 md:flex lg:w-60 dark:border-r dark:border-white/10">
       <SidebarBrand />
       <SidebarNav />
-      <SidebarUser userEmail={userEmail} />
+      <SidebarUser userEmail={userEmail} displayName={displayName} />
     </aside>
   );
 }

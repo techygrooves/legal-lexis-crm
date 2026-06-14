@@ -6,6 +6,7 @@ import { Plus, Search } from "lucide-react";
 
 import { DataTable, type Column } from "@/components/data-table";
 import { StatusBadge } from "@/components/status-badge";
+import { DeleteClientButton } from "./delete-client-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -69,6 +70,15 @@ const columns: Column<ClientListItem>[] = [
     cell: (client) => client.caseCount,
     className: "text-right",
   },
+  {
+    header: "",
+    cell: (client) => (
+      <div className="flex justify-end">
+        <DeleteClientButton clientId={client.id} clientName={client.name} />
+      </div>
+    ),
+    className: "w-0 text-right",
+  },
 ];
 
 export function ClientsList({ clients }: { clients: ClientListItem[] }) {
@@ -115,7 +125,8 @@ export function ClientsList({ clients }: { clients: ClientListItem[] }) {
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
+            <SelectItem value="closed">Closed</SelectItem>
+            <SelectItem value="prospect">Prospect</SelectItem>
           </SelectContent>
         </Select>
       </div>
