@@ -36,7 +36,7 @@ export default async function CalendarPage() {
   const [{ data: events, error }, { data: cases }] = await Promise.all([
     supabase
       .from("case_events")
-      .select("id, title, event_type, event_date, start_time, end_time, location")
+      .select("id, title, event_type, event_date, start_time, end_time, location, case_id")
       .eq("user_id", user.id)
       .order("event_date", { ascending: true }),
     supabase
@@ -58,6 +58,7 @@ export default async function CalendarPage() {
     endTime: formatTime(row.end_time),
     type: toEventType(row.event_type),
     location: row.location ?? undefined,
+    caseId: row.case_id,
   }));
 
   const caseOptions: CaseOption[] = (cases ?? []).map((c) => ({

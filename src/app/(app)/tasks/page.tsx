@@ -32,6 +32,7 @@ export default async function TasksPage() {
   const items: TaskItem[] = (tasks ?? []).map((row) => ({
     id: row.id,
     title: row.title,
+    caseId: row.case_id,
     caseTitle: row.case_id ? (caseTitles.get(row.case_id) ?? "") : "",
     dueDate: row.due_date,
     completed: row.status === "completed",

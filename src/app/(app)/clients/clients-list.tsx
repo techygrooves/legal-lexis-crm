@@ -29,21 +29,40 @@ export interface ClientListItem {
 const columns: Column<ClientListItem>[] = [
   {
     header: "Client Name",
-    cell: (client) => <span className="font-medium">{client.name}</span>,
+    cell: (client) => (
+      <Link
+        href={`/clients/${client.id}`}
+        className="font-medium hover:underline"
+      >
+        {client.name}
+      </Link>
+    ),
   },
   {
     header: "Email",
-    cell: (client) => client.email || "—",
+    cell: (client) => (
+      <Link href={`/clients/${client.id}`} className="hover:underline">
+        {client.email || "—"}
+      </Link>
+    ),
     className: "text-muted-foreground",
   },
   {
     header: "Phone",
-    cell: (client) => client.phone || "—",
+    cell: (client) => (
+      <Link href={`/clients/${client.id}`} className="hover:underline">
+        {client.phone || "—"}
+      </Link>
+    ),
     className: "text-muted-foreground",
   },
   {
     header: "Status",
-    cell: (client) => <StatusBadge status={client.status} />,
+    cell: (client) => (
+      <Link href={`/clients/${client.id}`}>
+        <StatusBadge status={client.status} />
+      </Link>
+    ),
   },
   {
     header: "Cases",

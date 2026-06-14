@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { format, parseISO } from "date-fns";
 import { Loader2, Plus, Trash2 } from "lucide-react";
@@ -32,6 +33,7 @@ import { createTask, deleteTask, setTaskStatus } from "./actions";
 export interface TaskItem {
   id: string;
   title: string;
+  caseId: string | null;
   caseTitle: string;
   dueDate: string | null;
   completed: boolean;
@@ -211,11 +213,19 @@ export function TasksView({
                     >
                       {task.title}
                     </span>
-                    {task.caseTitle && (
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {task.caseTitle}
-                      </span>
-                    )}
+                    {task.caseTitle &&
+                      (task.caseId ? (
+                        <Link
+                          href={`/cases/${task.caseId}`}
+                          className="block truncate text-xs text-indigo-600 hover:underline dark:text-indigo-400"
+                        >
+                          {task.caseTitle}
+                        </Link>
+                      ) : (
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {task.caseTitle}
+                        </span>
+                      ))}
                   </span>
                   {task.dueDate && (
                     <span

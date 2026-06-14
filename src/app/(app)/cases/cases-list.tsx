@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 
 import { DataTable, type Column } from "@/components/data-table";
 import { StatusBadge } from "@/components/status-badge";
@@ -21,6 +21,7 @@ import {
 export interface CaseListItem {
   id: string;
   title: string;
+  clientId: string | null;
   clientName: string;
   practiceArea: string;
   caseNumber: string;
@@ -44,17 +45,41 @@ const columns: Column<CaseListItem>[] = [
   },
   {
     header: "Client",
-    cell: (caseItem) => caseItem.clientName || "—",
+    cell: (caseItem) =>
+      caseItem.clientId ? (
+        <Link
+          href={`/clients/${caseItem.clientId}`}
+          className="hover:underline"
+        >
+          {caseItem.clientName || "—"}
+        </Link>
+      ) : (
+        caseItem.clientName || "—"
+      ),
     className: "text-muted-foreground",
   },
   {
     header: "Practice Area",
-    cell: (caseItem) => caseItem.practiceArea || "—",
+    cell: (caseItem) =>
+      caseItem.practiceArea ? (
+        <Link
+          href={`/cases?area=${encodeURIComponent(caseItem.practiceArea)}`}
+          className="hover:underline"
+        >
+          {caseItem.practiceArea}
+        </Link>
+      ) : (
+        "—"
+      ),
     className: "text-muted-foreground",
   },
   {
     header: "Case Number",
-    cell: (caseItem) => caseItem.caseNumber || "—",
+    cell: (caseItem) => (
+      <Link href={`/cases/${caseItem.id}`} className="hover:underline">
+        {caseItem.caseNumber || "—"}
+      </Link>
+    ),
     className: "text-muted-foreground",
   },
   {
@@ -71,9 +96,17 @@ const columns: Column<CaseListItem>[] = [
   },
 ];
 
-export function CasesList({ cases }: { cases: CaseListItem[] }) {
+export function CasesList({
+  cases,
+  initialStatus = "all",
+  area = "",
+}: {
+  cases: CaseListItem[];
+  initialStatus?: string;
+  area?: string;
+}) {
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("all");
+  const [status, setStatus] = useState(initialStatus);
 
   const filtered = cases.filter((caseItem) => {
     const q = query.toLowerCase();
@@ -85,7 +118,8 @@ export function CasesList({ cases }: { cases: CaseListItem[] }) {
       caseItem.judgeName.toLowerCase().includes(q);
     const matchesStatus =
       status === "all" || caseItem.status.toLowerCase() === status;
-    return matchesQuery && matchesStatus;
+    const matchesArea = !area || caseItem.practiceArea === area;
+    return matchesQuery && matchesStatus && matchesArea;
   });
 
   return (
@@ -122,6 +156,14 @@ export function CasesList({ cases }: { cases: CaseListItem[] }) {
             <SelectItem value="closed">Closed</SelectItem>
           </SelectContent>
         </Select>
+        {area && (
+          <Button asChild variant="secondary" size="sm">
+            <Link href="/cases">
+              {area}
+              <X data-icon="inline-end" />
+            </Link>
+          </Button>
+        )}
       </div>
 
       <Card>
