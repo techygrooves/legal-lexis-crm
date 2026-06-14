@@ -43,6 +43,11 @@ export type CaseRow = {
   judge_name: string | null;
   opposing_party: string | null;
   opposing_attorney: string | null;
+  state_attorney: string | null;
+  state_attorney_phone: string | null;
+  charge: string | null;
+  insurance_company: string | null;
+  insurance_agent_phone: string | null;
   status: string;
   filed_date: string | null;
   description: string | null;

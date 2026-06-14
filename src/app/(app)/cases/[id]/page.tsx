@@ -140,6 +140,11 @@ export default async function CaseDetailPage({
     ["Judge", caseRow.judge_name ?? "—"],
     ["Opposing Party", caseRow.opposing_party ?? "—"],
     ["Opposing Attorney", caseRow.opposing_attorney ?? "—"],
+    ["State Attorney", caseRow.state_attorney ?? "—"],
+    ["State Attorney Phone", caseRow.state_attorney_phone ?? "—"],
+    ["Charge", caseRow.charge ?? "—"],
+    ["Insurance Company", caseRow.insurance_company ?? "—"],
+    ["Insurance Agent Phone", caseRow.insurance_agent_phone ?? "—"],
     [
       "Filed Date",
       caseRow.filed_date

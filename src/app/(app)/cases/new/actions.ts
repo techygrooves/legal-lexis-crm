@@ -22,6 +22,11 @@ export interface CreateCasePayload {
     judgeName: string;
     opposingParty: string;
     opposingAttorney: string;
+    stateAttorney: string;
+    stateAttorneyPhone: string;
+    charge: string;
+    insuranceCompany: string;
+    insuranceAgentPhone: string;
     status: string;
     filedDate: string;
   };
@@ -92,6 +97,11 @@ export async function createCase(
     judge_name: orNull(payload.caseDetails.judgeName),
     opposing_party: orNull(payload.caseDetails.opposingParty),
     opposing_attorney: orNull(payload.caseDetails.opposingAttorney),
+    state_attorney: orNull(payload.caseDetails.stateAttorney),
+    state_attorney_phone: orNull(payload.caseDetails.stateAttorneyPhone),
+    charge: orNull(payload.caseDetails.charge),
+    insurance_company: orNull(payload.caseDetails.insuranceCompany),
+    insurance_agent_phone: orNull(payload.caseDetails.insuranceAgentPhone),
     status: payload.caseDetails.status || "open",
     filed_date: orNull(payload.caseDetails.filedDate),
     description: null,

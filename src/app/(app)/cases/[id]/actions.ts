@@ -22,6 +22,11 @@ export interface UpdateCasePayload {
   judgeName: string;
   opposingParty: string;
   opposingAttorney: string;
+  stateAttorney: string;
+  stateAttorneyPhone: string;
+  charge: string;
+  insuranceCompany: string;
+  insuranceAgentPhone: string;
   status: string;
   filedDate: string;
   description: string;
@@ -48,6 +53,11 @@ export async function updateCase(
     judge_name: orNull(payload.judgeName),
     opposing_party: orNull(payload.opposingParty),
     opposing_attorney: orNull(payload.opposingAttorney),
+    state_attorney: orNull(payload.stateAttorney),
+    state_attorney_phone: orNull(payload.stateAttorneyPhone),
+    charge: orNull(payload.charge),
+    insurance_company: orNull(payload.insuranceCompany),
+    insurance_agent_phone: orNull(payload.insuranceAgentPhone),
     status: payload.status || "open",
     filed_date: orNull(payload.filedDate),
     description: orNull(payload.description),

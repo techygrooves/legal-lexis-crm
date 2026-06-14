@@ -72,6 +72,11 @@ export function EditCaseForm({
       judgeName: field("judgeName"),
       opposingParty: field("opposingParty"),
       opposingAttorney: field("opposingAttorney"),
+      stateAttorney: field("stateAttorney"),
+      stateAttorneyPhone: field("stateAttorneyPhone"),
+      charge: field("charge"),
+      insuranceCompany: field("insuranceCompany"),
+      insuranceAgentPhone: field("insuranceAgentPhone"),
       status,
       filedDate: field("filedDate"),
       description: field("description"),
@@ -139,6 +144,21 @@ export function EditCaseForm({
             </Field>
             <Field id="opposing-attorney" label="Opposing Attorney">
               <Input id="opposing-attorney" name="opposingAttorney" defaultValue={initial.opposingAttorney} />
+            </Field>
+            <Field id="state-attorney" label="State Attorney">
+              <Input id="state-attorney" name="stateAttorney" defaultValue={initial.stateAttorney} />
+            </Field>
+            <Field id="state-attorney-phone" label="State Attorney Phone">
+              <Input id="state-attorney-phone" name="stateAttorneyPhone" type="tel" defaultValue={initial.stateAttorneyPhone} />
+            </Field>
+            <Field id="charge" label="Charge">
+              <Input id="charge" name="charge" defaultValue={initial.charge} />
+            </Field>
+            <Field id="insurance-company" label="Insurance Company">
+              <Input id="insurance-company" name="insuranceCompany" defaultValue={initial.insuranceCompany} />
+            </Field>
+            <Field id="insurance-agent-phone" label="Insurance Agent Phone">
+              <Input id="insurance-agent-phone" name="insuranceAgentPhone" type="tel" defaultValue={initial.insuranceAgentPhone} />
             </Field>
             <Field id="case-status" label="Case Status">
               <Select value={status} onValueChange={setStatus}>
