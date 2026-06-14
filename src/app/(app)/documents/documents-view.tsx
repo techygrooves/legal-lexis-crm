@@ -10,6 +10,7 @@ import {
   Loader2,
   Pencil,
   Search,
+  Trash2,
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -18,7 +19,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { createFolder, renameFolder, uploadDocument } from "./actions";
+import {
+  createFolder,
+  deleteDocument,
+  renameFolder,
+  uploadDocument,
+} from "./actions";
 
 export interface DocumentListItem {
   id: string;
@@ -125,6 +131,17 @@ export function DocumentsView({
       } else {
         setNewFolderName("");
         toast.success("Folder created");
+      }
+    });
+  }
+
+  function handleDeleteDocument(documentId: string) {
+    startTransition(async () => {
+      const result = await deleteDocument(documentId);
+      if (result.error) {
+        toast.error("Could not delete", { description: result.error });
+      } else {
+        toast.success("Document deleted");
       }
     });
   }
@@ -358,6 +375,16 @@ export function DocumentsView({
                     {format(parseISO(doc.uploadedAt), "MMM d, yyyy")}
                   </p>
                 </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={pending}
+                  onClick={() => handleDeleteDocument(doc.id)}
+                >
+                  <Trash2 />
+                  <span className="sr-only">Delete document</span>
+                </Button>
               </div>
             );
           })}
