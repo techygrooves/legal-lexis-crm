@@ -100,7 +100,7 @@ export function ClientsList({ clients }: { clients: ClientListItem[] }) {
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Clients</h1>
         <Button asChild>
-          <Link href="/cases/new">
+          <Link href="/clients/new">
             <Plus data-icon="inline-start" />
             Add Client
           </Link>

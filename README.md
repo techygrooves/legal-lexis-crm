@@ -70,14 +70,28 @@ you can disable **Confirm email** there instead.
 can then create their own login at `/login`. To lock it down to a single user,
 disable that toggle after creating your account.
 
-**Password reset:** the app has a "Forgot password?" flow (`/forgot-password`).
-For the reset email link to work, add your app's callback URL to
-**Authentication → URL Configuration → Redirect URLs**:
+**URL configuration (do this once):** under **Authentication → URL
+Configuration**, set the **Site URL** to your deployed app (e.g.
+`https://YOUR-PROJECT.vercel.app`, **not** `http://localhost:3000` — pointing it
+at localhost is what makes confirmation links open a blank localhost tab), and
+add these to **Redirect URLs**:
 
-- Local: `http://localhost:3000/auth/callback`
-- Production: `https://YOUR-DOMAIN/auth/callback`
+- `https://YOUR-DOMAIN/auth/callback` and `https://YOUR-DOMAIN/auth/confirm`
+- `http://localhost:3000/auth/callback` and `http://localhost:3000/auth/confirm`
 
-Also set the **Site URL** there to your deployed URL.
+**Password reset:** the "Forgot password?" flow (`/forgot-password`) uses
+`/auth/callback`. No further config beyond the redirect URLs above.
+
+**Email confirmation:** so the confirmation link lands on a friendly "email
+confirmed — sign in" page instead of a bare redirect, edit the **Confirm signup**
+template (**Authentication → Emails → Templates**) so the button link is:
+
+```
+{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup
+```
+
+The `/auth/confirm` route verifies the address, signs the user out, and sends
+them to `/login` with a confirmation banner so they sign in themselves.
 
 ### 5. Storage bucket for documents
 

@@ -9,15 +9,24 @@ export function StatCard({
   change,
   icon: Icon,
   iconClassName,
+  interactive = false,
 }: {
   label: string;
   value: string | number;
   change?: string;
   icon: LucideIcon;
   iconClassName?: string;
+  // When rendered inside a link, adds hover affordances (cursor, lift, border,
+  // shadow) so it's obvious the card is clickable.
+  interactive?: boolean;
 }) {
   return (
-    <Card>
+    <Card
+      className={cn(
+        interactive &&
+          "group cursor-pointer transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md dark:hover:border-indigo-800"
+      )}
+    >
       <CardContent className="flex items-start justify-between gap-3 px-5 py-1">
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground">{label}</p>
@@ -26,7 +35,8 @@ export function StatCard({
         </div>
         <div
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400",
+            "flex size-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 transition-transform dark:bg-indigo-950 dark:text-indigo-400",
+            interactive && "group-hover:scale-110",
             iconClassName
           )}
         >
