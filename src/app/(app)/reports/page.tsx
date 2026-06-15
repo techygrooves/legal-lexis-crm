@@ -57,7 +57,7 @@ function Breakdown({
           <Link
             key={row.label}
             href={row.href}
-            className="group -mx-2 flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-muted"
+            className="group -mx-2 flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-hover"
           >
             <div className="min-w-0 flex-1 space-y-1">{inner}</div>
             <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:text-indigo-500" />

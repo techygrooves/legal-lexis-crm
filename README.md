@@ -93,6 +93,22 @@ template (**Authentication → Emails → Templates**) so the button link is:
 The `/auth/confirm` route verifies the address, signs the user out, and sends
 them to `/login` with a confirmation banner so they sign in themselves.
 
+**"Email rate limit exceeded" on sign-up:** Supabase's *built-in* email service
+is meant only for early testing and caps confirmation emails at a few per hour
+(shared across the whole project). Repeated sign-up attempts trip it. Fix it one
+of these ways:
+
+- **Turn off confirmation (simplest for a solo practice):** disable
+  **Authentication → Sign In / Up → Confirm email**. Sign-ups then work
+  instantly with no email sent and no rate limit.
+- **Add your own SMTP (keeps confirmation, raises the limit):** under
+  **Authentication → Emails → SMTP Settings**, enable custom SMTP and plug in a
+  provider (Resend, SendGrid, Postmark, AWS SES, etc.). The per-hour cap is then
+  governed by your provider, and you can raise the rate under
+  **Authentication → Rate Limits**.
+- **Just wait:** the built-in limit resets on a rolling window, so pausing for
+  an hour also clears it.
+
 ### 5. Storage bucket for documents
 
 Document upload on the case detail page is now live, and requires a bucket plus

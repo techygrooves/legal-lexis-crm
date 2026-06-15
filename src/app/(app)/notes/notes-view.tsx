@@ -146,7 +146,7 @@ export function NotesView({
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {filtered.map((note) => (
-            <Card key={note.id} className="transition-colors hover:bg-muted">
+            <Card key={note.id} className="transition-colors hover:bg-hover">
               <CardContent className="space-y-2 px-4 py-3">
                 <p className="text-sm whitespace-pre-wrap">{note.note}</p>
                 <div className="flex items-center justify-between gap-2">
