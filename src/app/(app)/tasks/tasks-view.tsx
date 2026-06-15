@@ -195,7 +195,7 @@ export function TasksView({
               {section.items.map((task) => (
                 <div
                   key={task.id}
-                  className="group flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
+                  className="group flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted"
                 >
                   <Checkbox
                     className="mt-0.5"

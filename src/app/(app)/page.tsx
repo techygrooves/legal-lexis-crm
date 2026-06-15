@@ -267,7 +267,7 @@ export default async function DashboardPage() {
                 <Link
                   key={event.id}
                   href={`/cases/${event.case_id}`}
-                  className="-mx-1 flex items-start gap-3 rounded-lg px-1 py-0.5 transition-colors hover:bg-muted/50"
+                  className="-mx-1 flex items-start gap-3 rounded-lg px-1 py-0.5 transition-colors hover:bg-muted"
                 >
                   {inner}
                 </Link>
@@ -424,7 +424,7 @@ export default async function DashboardPage() {
                 return (
                   <div
                     key={doc.id}
-                    className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5"
+                    className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 transition-colors hover:bg-muted"
                   >
                     <span
                       className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${className}`}

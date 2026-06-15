@@ -280,7 +280,7 @@ export function DocumentsView({
           {caseFolders.map((folder) => (
             <div
               key={folder.id}
-              className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5"
+              className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 transition-colors hover:bg-muted"
             >
               <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400">
                 <Folder className="size-4.5" />
@@ -339,7 +339,7 @@ export function DocumentsView({
             return (
               <div
                 key={doc.id}
-                className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5"
+                className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 transition-colors hover:bg-muted"
               >
                 <span
                   className={cn(

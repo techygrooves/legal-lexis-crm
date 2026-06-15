@@ -24,7 +24,7 @@ export function StatCard({
     <Card
       className={cn(
         interactive &&
-          "group cursor-pointer transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md dark:hover:border-indigo-800"
+          "group cursor-pointer transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:bg-muted hover:shadow-md dark:hover:border-indigo-800"
       )}
     >
       <CardContent className="flex items-start justify-between gap-3 px-5 py-1">
