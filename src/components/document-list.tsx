@@ -30,7 +30,7 @@ export function DocumentList({
         return (
           <div
             key={doc.id}
-            className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 transition-colors hover:bg-muted"
+            className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 transition-colors hover:bg-hover"
           >
             <span
               className={cn(

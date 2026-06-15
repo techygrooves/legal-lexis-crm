@@ -71,7 +71,16 @@ function LoginForm() {
 
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) {
-      setError(error.message);
+      // Supabase's built-in email service has a low hourly cap. Repeated
+      // sign-up attempts hit it and return "email rate limit exceeded", which
+      // is opaque to a user — explain it and point at the real fix.
+      const rateLimited =
+        error.status === 429 || /rate limit/i.test(error.message);
+      setError(
+        rateLimited
+          ? "Too many confirmation emails were requested recently. Wait a few minutes and try again. (If this keeps happening, the project needs a custom SMTP provider, or email confirmation can be turned off in Supabase.)"
+          : error.message
+      );
       setLoading(false);
       return;
     }
