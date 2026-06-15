@@ -176,7 +176,7 @@ export function ContactsView({
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((contact) => (
-            <Card key={contact.id}>
+            <Card key={contact.id} className="transition-colors hover:bg-muted">
               <CardContent className="space-y-2 px-4 py-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">

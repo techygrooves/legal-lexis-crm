@@ -54,7 +54,7 @@ export function DataTable<T>({
           </TableRow>
         ) : (
           data.map((row) => (
-            <TableRow key={getRowKey(row)}>
+            <TableRow key={getRowKey(row)} className="cursor-pointer">
               {columns.map((column) => (
                 <TableCell key={column.header} className={column.className}>
                   {column.cell(row)}

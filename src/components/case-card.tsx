@@ -14,7 +14,7 @@ export function CaseCard({ caseItem }: { caseItem: CaseCardData }) {
   return (
     <Link
       href={`/cases/${caseItem.id}`}
-      className="group flex cursor-pointer items-center gap-3 rounded-lg border bg-card px-4 py-3 transition-colors hover:border-indigo-200 hover:bg-muted/50 dark:hover:border-indigo-900"
+      className="group flex cursor-pointer items-center gap-3 rounded-lg border bg-card px-4 py-3 transition-colors hover:border-indigo-200 hover:bg-muted dark:hover:border-indigo-900"
     >
       <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400">
         <FolderClosed className="size-4.5" />
