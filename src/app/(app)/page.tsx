@@ -188,31 +188,34 @@ export default async function DashboardPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Link href="/clients" className="block transition-opacity hover:opacity-90">
-          <StatCard label="Total Clients" value={clientCount ?? 0} icon={Users} />
+        <Link href="/clients" className="block">
+          <StatCard label="Total Clients" value={clientCount ?? 0} icon={Users} interactive />
         </Link>
-        <Link href="/cases?status=open" className="block transition-opacity hover:opacity-90">
+        <Link href="/cases?status=open" className="block">
           <StatCard
             label="Open Cases"
             value={openCaseCount ?? 0}
             icon={FolderClosed}
+            interactive
           />
         </Link>
-        <Link href="/calendar" className="block transition-opacity hover:opacity-90">
+        <Link href="/calendar" className="block">
           <StatCard
             label="Upcoming Events"
             value={upcomingEventCount ?? 0}
             change="From today"
             icon={CalendarCheck}
             iconClassName="bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
+            interactive
           />
         </Link>
-        <Link href="/tasks" className="block transition-opacity hover:opacity-90">
+        <Link href="/tasks" className="block">
           <StatCard
             label="Pending Tasks"
             value={pendingTaskCount ?? 0}
             icon={ListChecks}
             iconClassName="bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400"
+            interactive
           />
         </Link>
       </div>
@@ -348,22 +351,25 @@ export default async function DashboardPage() {
                   <Link
                     key={row.label}
                     href={row.href}
-                    className="block space-y-1 transition-opacity hover:opacity-80"
+                    className="group -mx-2 flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-muted"
                   >
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="truncate">{row.label}</span>
-                      <span className="shrink-0 font-medium tabular-nums">
-                        {row.count}
-                      </span>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="truncate">{row.label}</span>
+                        <span className="shrink-0 font-medium tabular-nums">
+                          {row.count}
+                        </span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-indigo-500"
+                          style={{
+                            width: `${(row.count / practiceAreaBreakdown.max) * 100}%`,
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-indigo-500"
-                        style={{
-                          width: `${(row.count / practiceAreaBreakdown.max) * 100}%`,
-                        }}
-                      />
-                    </div>
+                    <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:text-indigo-500" />
                   </Link>
                 ))}
               </div>

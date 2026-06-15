@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { format } from "date-fns";
 import {
   CalendarClock,
+  ChevronRight,
   FileText,
   FolderClosed,
   ListChecks,
@@ -56,9 +57,10 @@ function Breakdown({
           <Link
             key={row.label}
             href={row.href}
-            className="block space-y-1 transition-opacity hover:opacity-80"
+            className="group -mx-2 flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-muted"
           >
-            {inner}
+            <div className="min-w-0 flex-1 space-y-1">{inner}</div>
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:text-indigo-500" />
           </Link>
         ) : (
           <div key={row.label} className="space-y-1">
@@ -139,46 +141,51 @@ export default async function ReportsPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <Link href="/clients" className="block transition-opacity hover:opacity-90">
+        <Link href="/clients" className="block">
           <StatCard
             label="Total Clients"
             value={clientRows.length}
             change={`${activeClients} active`}
             icon={Users}
+            interactive
           />
         </Link>
-        <Link href="/cases" className="block transition-opacity hover:opacity-90">
+        <Link href="/cases" className="block">
           <StatCard
             label="Total Cases"
             value={caseRows.length}
             change={`${openCases} open`}
             icon={FolderClosed}
+            interactive
           />
         </Link>
-        <Link href="/tasks" className="block transition-opacity hover:opacity-90">
+        <Link href="/tasks" className="block">
           <StatCard
             label="Pending Tasks"
             value={pendingTasks}
             change={`${taskRows.length} total`}
             icon={ListChecks}
             iconClassName="bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400"
+            interactive
           />
         </Link>
-        <Link href="/calendar" className="block transition-opacity hover:opacity-90">
+        <Link href="/calendar" className="block">
           <StatCard
             label="Upcoming Deadlines"
             value={upcomingDeadlines ?? 0}
             change="From today"
             icon={CalendarClock}
             iconClassName="bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400"
+            interactive
           />
         </Link>
-        <Link href="/documents" className="block transition-opacity hover:opacity-90">
+        <Link href="/documents" className="block">
           <StatCard
             label="Documents"
             value={documentCount ?? 0}
             icon={FileText}
             iconClassName="bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
+            interactive
           />
         </Link>
       </div>

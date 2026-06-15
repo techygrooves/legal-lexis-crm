@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { Loader2, Scale } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -20,13 +20,31 @@ import { createClient } from "@/lib/supabase/client";
 type Mode = "signin" | "signup";
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
+  // Initialize banners from the email-confirmation redirect (see /auth/confirm).
+  const [error, setError] = useState<string | null>(
+    searchParams.get("error") === "confirm"
+      ? "That confirmation link is invalid or has expired. Sign in, or request a new link."
+      : null
+  );
+  const [info, setInfo] = useState<string | null>(
+    searchParams.get("confirmed") === "1"
+      ? "Your email is confirmed. Sign in below to continue."
+      : null
+  );
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
