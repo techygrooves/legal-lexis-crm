@@ -39,6 +39,10 @@ export interface CalendarEvent {
   type: EventType;
   location?: string;
   caseId?: string | null;
+  // Populated when the event is tied to a case. Either can be empty (a case
+  // may have no case number, or no client assigned yet).
+  caseNumber?: string;
+  clientName?: string;
 }
 
 export interface Task {

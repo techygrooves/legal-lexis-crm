@@ -83,29 +83,53 @@ export function CalendarPreview({
               <div className="mt-0.5 space-y-1">
                 {dayEvents.map((event) => {
                   const className = cn(
-                    "block truncate rounded border px-1.5 py-0.5 text-[11px] leading-4",
+                    "block rounded border px-1.5 py-0.5 text-[11px] leading-4",
                     eventColors[event.type],
                     event.caseId && "hover:brightness-95"
                   );
+                  // Case number and client name are only meaningful when the
+                  // event is tied to a case, and either can be empty.
+                  const caseDetails = event.caseId
+                    ? [event.caseNumber, event.clientName].filter(Boolean)
+                    : [];
+                  const tooltip = [
+                    event.title,
+                    ...caseDetails,
+                    event.caseId ? "open case" : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" — ");
                   const content = (
                     <>
-                      {event.startTime && (
-                        <span className="font-medium">{event.startTime} </span>
-                      )}
-                      {event.type}
+                      <span className="block truncate">
+                        {event.startTime && (
+                          <span className="font-medium">
+                            {event.startTime}{" "}
+                          </span>
+                        )}
+                        {event.type}
+                      </span>
+                      {caseDetails.map((detail, i) => (
+                        <span
+                          key={i}
+                          className="block truncate opacity-80"
+                        >
+                          {detail}
+                        </span>
+                      ))}
                     </>
                   );
                   return event.caseId ? (
                     <Link
                       key={event.id}
                       href={`/cases/${event.caseId}`}
-                      title={`${event.title} — open case`}
+                      title={tooltip}
                       className={className}
                     >
                       {content}
                     </Link>
                   ) : (
-                    <div key={event.id} title={event.title} className={className}>
+                    <div key={event.id} title={tooltip} className={className}>
                       {content}
                     </div>
                   );
