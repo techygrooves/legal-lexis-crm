@@ -113,3 +113,45 @@ export async function deleteClient(clientId: string): Promise<MutationResult> {
   revalidatePath("/", "layout");
   return {};
 }
+
+export interface UpdateClientPayload {
+  fullName: string;
+  email: string;
+  phone: string;
+  address: string;
+  source: string;
+  status: string;
+  notes: string;
+}
+
+export async function updateClient(
+  clientId: string,
+  payload: UpdateClientPayload
+): Promise<MutationResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
+  if (!payload.fullName.trim()) return { error: "Client name is required." };
+
+  const { error } = await supabase
+    .from("clients")
+    .update({
+      full_name: payload.fullName.trim(),
+      email: orNull(payload.email),
+      phone: orNull(payload.phone),
+      address: orNull(payload.address),
+      source: orNull(payload.source),
+      status: payload.status || "active",
+      notes: orNull(payload.notes),
+    })
+    .eq("id", clientId)
+    .eq("user_id", user.id);
+
+  if (error) return { error: `Could not save changes: ${error.message}` };
+
+  revalidatePath("/", "layout");
+  return {};
+}

@@ -75,7 +75,7 @@ export async function GET(request: Request) {
     if (error) {
       console.error("Saving Google tokens failed:", error);
       return NextResponse.redirect(
-        `${origin}/settings?googleError=${encodeURIComponent("save-failed")}`
+        `${origin}/settings?googleError=${encodeURIComponent("save-failed")}&googleErrorDetail=${encodeURIComponent(error.message)}`
       );
     }
 
