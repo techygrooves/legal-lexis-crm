@@ -21,7 +21,7 @@ const googleErrorMessages: Record<string, string> = {
   "no-refresh-token":
     "Google didn't return a refresh token. Remove this app from https://myaccount.google.com/permissions and try Connect again.",
   "save-failed":
-    "Could not save the Google Calendar connection. Please try again.",
+    "Could not save the Google Calendar connection. The most common cause is that the database migration supabase/migrations/20260615000000_google_calendar.sql hasn't been run yet — apply it in the Supabase SQL Editor and try again.",
   "exchange-failed":
     "Could not finish Google sign-in. Please try again.",
   "access_denied":
@@ -70,15 +70,21 @@ export default async function SettingsPage({
   const pickFirst = (value: string | string[] | undefined) =>
     Array.isArray(value) ? value[0] : value;
   const googleErrorParam = pickFirst(params.googleError);
+  const googleErrorDetail = pickFirst(params.googleErrorDetail);
   const googleConnected = pickFirst(params.googleConnected) === "1";
   const googleDisconnected = pickFirst(params.googleDisconnected) === "1";
+
+  const baseGoogleError =
+    googleErrorParam &&
+    (googleErrorMessages[googleErrorParam] ??
+      `Google Calendar error: ${googleErrorParam}`);
 
   const googleStatus = googleErrorParam
     ? {
         kind: "error" as const,
-        message:
-          googleErrorMessages[googleErrorParam] ??
-          `Google Calendar error: ${googleErrorParam}`,
+        message: googleErrorDetail
+          ? `${baseGoogleError} (Reported by Supabase: ${googleErrorDetail})`
+          : baseGoogleError!,
       }
     : googleConnected
       ? {
