@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 
 import { CaseCard } from "@/components/case-card";
 import { StatusBadge } from "@/components/status-badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -73,7 +74,13 @@ export default async function ClientDetailPage({
           {client.full_name}
         </h1>
         <StatusBadge status={derivedStatus} />
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/clients/${client.id}/edit`}>
+              <Pencil data-icon="inline-start" />
+              Edit
+            </Link>
+          </Button>
           <DeleteClientButton
             clientId={client.id}
             clientName={client.full_name}
