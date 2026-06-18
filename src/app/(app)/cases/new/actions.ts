@@ -7,6 +7,10 @@ import { pushEvent } from "@/lib/google-calendar";
 import type { TablesInsert } from "@/lib/types/database";
 
 export interface CreateCasePayload {
+  // When set, the case is attached to this existing client (must belong to
+  // the signed-in user). When empty/missing, a new client is created from the
+  // `client` block below.
+  existingClientId?: string;
   client: {
     fullName: string;
     email: string;
@@ -62,33 +66,49 @@ export async function createCase(
     return { error: "You must be signed in to create a case." };
   }
 
-  if (!payload.client.fullName.trim()) {
-    return { error: "Client name is required." };
-  }
   if (!payload.caseDetails.title.trim()) {
     return { error: "Case title is required." };
   }
 
-  // 1. Client
-  const clientInsert: TablesInsert<"clients"> = {
-    user_id: user.id,
-    full_name: payload.client.fullName.trim(),
-    email: orNull(payload.client.email),
-    phone: orNull(payload.client.phone),
-    address: orNull(payload.client.address),
-    source: orNull(payload.client.source),
-    status: "active",
-    notes: null,
-  };
+  // 1. Client: either reuse an existing one or create a new row.
+  let client: { id: string };
+  let createdClientId: string | null = null;
 
-  const { data: client, error: clientError } = await supabase
-    .from("clients")
-    .insert(clientInsert)
-    .select("id")
-    .single();
-
-  if (clientError || !client) {
-    return { error: `Could not save client: ${clientError?.message}` };
+  if (payload.existingClientId) {
+    const { data: existing } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("id", payload.existingClientId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!existing) {
+      return { error: "Selected client not found." };
+    }
+    client = { id: existing.id };
+  } else {
+    if (!payload.client.fullName.trim()) {
+      return { error: "Client name is required." };
+    }
+    const clientInsert: TablesInsert<"clients"> = {
+      user_id: user.id,
+      full_name: payload.client.fullName.trim(),
+      email: orNull(payload.client.email),
+      phone: orNull(payload.client.phone),
+      address: orNull(payload.client.address),
+      source: orNull(payload.client.source),
+      status: "active",
+      notes: null,
+    };
+    const { data: created, error: clientError } = await supabase
+      .from("clients")
+      .insert(clientInsert)
+      .select("id")
+      .single();
+    if (clientError || !created) {
+      return { error: `Could not save client: ${clientError?.message}` };
+    }
+    client = created;
+    createdClientId = created.id;
   }
 
   // 2. Case linked to the client
@@ -120,8 +140,11 @@ export async function createCase(
     .single();
 
   if (caseError || !caseRow) {
-    // Don't leave an orphaned client behind.
-    await supabase.from("clients").delete().eq("id", client.id);
+    // Only clean up the client if we created it for this case. An existing
+    // client that the user picked must not be deleted on case-insert failure.
+    if (createdClientId) {
+      await supabase.from("clients").delete().eq("id", createdClientId);
+    }
     return { error: `Could not save case: ${caseError?.message}` };
   }
 
