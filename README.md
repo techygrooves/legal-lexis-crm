@@ -130,6 +130,60 @@ storage paths.
 > `public` schema is still **not** enabled. Until that is added, treat the
 > database as not yet hardened for highly sensitive data.
 
+### 6. Google Calendar sync (optional)
+
+Connecting Google Calendar makes events you create in the CRM also appear on
+the user's Google Calendar. Sync is **one-way** for now: the CRM is the source
+of truth; Google-only events are not imported back. If the user isn't connected
+(or sync fails), the CRM event still saves normally — Calendar sync is
+strictly additive.
+
+**1. Create the Google Cloud OAuth client (once, in any Google account you control):**
+
+1. Go to https://console.cloud.google.com → create a project (or reuse one).
+2. **APIs & Services → Library** → enable **Google Calendar API**.
+3. **APIs & Services → OAuth consent screen** → User type: **External** →
+   keep the app in **Testing** publishing status and add each CRM user's Gmail
+   address as a Test user. (Testing mode skips Google verification and allows
+   up to 100 test users — enough for a small practice.)
+4. **APIs & Services → Credentials → Create OAuth client ID → Web application.**
+5. **Authorized redirect URIs:** add
+   `https://YOUR-DOMAIN/api/google/calendar/callback`
+   (and the matching `http://localhost:3000/api/google/calendar/callback` for
+   local dev).
+6. Copy the **Client ID** and **Client secret**.
+
+**2. Set environment variables** (Vercel → Project Settings → Environment
+Variables, and `.env.local` for local dev):
+
+```bash
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_REDIRECT_URI=https://YOUR-DOMAIN/api/google/calendar/callback
+GOOGLE_CALENDAR_SCOPES=https://www.googleapis.com/auth/calendar.events
+```
+
+**3. Apply the migration** `supabase/migrations/20260615000000_google_calendar.sql`
+the same way as the initial schema — paste into the Supabase SQL Editor and
+run, or `supabase db push`. This creates `google_calendar_tokens` and adds the
+`google_event_id` column to `case_events`.
+
+**4. Connect each user:** sign in to the CRM → **Settings → Google Calendar →
+Connect**. The user grants access on Google's consent screen and lands back on
+Settings with a "connected" banner. From then on, every new event created in
+the CRM is mirrored to their Google Calendar. Disconnecting revokes the token
+at Google and removes the row; existing events are left in place.
+
+**Common gotchas**
+- `redirect_uri_mismatch`: the URI in Google Cloud Console must match
+  `GOOGLE_REDIRECT_URI` exactly, including scheme, host, and the
+  `/api/google/calendar/callback` path.
+- `access_denied`: the user's Gmail address isn't in the Test users list. Add
+  it in **OAuth consent screen → Test users**.
+- "Google didn't return a refresh token": Google only issues one on first
+  consent. Have the user visit https://myaccount.google.com/permissions,
+  remove the app, and click **Connect** again.
+
 ## Auth flow
 
 - `/login` — sign in or sign up with email and password.

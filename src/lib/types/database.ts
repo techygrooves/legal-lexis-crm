@@ -67,6 +67,7 @@ export type CaseEventRow = {
   end_time: string | null;
   location: string | null;
   notes: string | null;
+  google_event_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -133,6 +134,18 @@ export type ContactRow = {
   updated_at: string;
 }
 
+export type GoogleCalendarTokenRow = {
+  user_id: string;
+  refresh_token: string;
+  access_token: string | null;
+  expires_at: string | null;
+  calendar_id: string;
+  calendar_timezone: string | null;
+  google_email: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // Insert types: generated columns (id, timestamps) and columns with database
 // defaults (status, priority, event_type) are optional.
 type InsertOf<Row, Defaulted extends keyof Row = never> = Omit<
@@ -153,12 +166,13 @@ export type Database = {
     Tables: {
       clients: TableOf<ClientRow, "status">;
       cases: TableOf<CaseRow, "status">;
-      case_events: TableOf<CaseEventRow, "event_type">;
+      case_events: TableOf<CaseEventRow, "event_type" | "google_event_id">;
       tasks: TableOf<TaskRow, "priority" | "status">;
       document_folders: TableOf<DocumentFolderRow>;
       documents: TableOf<DocumentRow>;
       notes: TableOf<NoteRow>;
       contacts: TableOf<ContactRow>;
+      google_calendar_tokens: TableOf<GoogleCalendarTokenRow, "calendar_id">;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
