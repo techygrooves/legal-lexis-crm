@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { pushEvent } from "@/lib/google-calendar";
 import type { TablesInsert } from "@/lib/types/database";
 
 export interface CreateCasePayload {
@@ -143,8 +144,23 @@ export async function createCase(
       notes: null,
     }));
   if (events.length > 0) {
-    const { error } = await supabase.from("case_events").insert(events);
+    const { data: insertedEvents, error } = await supabase
+      .from("case_events")
+      .insert(events)
+      .select("*");
     if (error) warnings.push(`events (${error.message})`);
+
+    // Mirror to Google Calendar one by one. Errors are swallowed inside
+    // pushEvent; the CRM event rows are already saved by this point.
+    for (const inserted of insertedEvents ?? []) {
+      const googleEventId = await pushEvent(supabase, user.id, inserted);
+      if (googleEventId) {
+        await supabase
+          .from("case_events")
+          .update({ google_event_id: googleEventId })
+          .eq("id", inserted.id);
+      }
+    }
   }
 
   const tasks: TablesInsert<"tasks">[] = payload.tasks

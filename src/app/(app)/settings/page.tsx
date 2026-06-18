@@ -9,9 +9,30 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
+import { isConfigured as googleConfigured } from "@/lib/google-calendar";
 import { DisplayNameForm } from "./display-name-form";
+import { GoogleCalendarCard } from "./google-calendar-card";
 
-export default async function SettingsPage() {
+const googleErrorMessages: Record<string, string> = {
+  "not-configured":
+    "Google Calendar isn't configured for this deployment yet.",
+  "invalid-state":
+    "The Google sign-in link expired or was tampered with. Please try again.",
+  "no-refresh-token":
+    "Google didn't return a refresh token. Remove this app from https://myaccount.google.com/permissions and try Connect again.",
+  "save-failed":
+    "Could not save the Google Calendar connection. Please try again.",
+  "exchange-failed":
+    "Could not finish Google sign-in. Please try again.",
+  "access_denied":
+    "Permission was denied during the Google consent screen.",
+};
+
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -38,6 +59,38 @@ export default async function SettingsPage() {
         : "—",
     ],
   ];
+
+  const { data: tokenRow } = await supabase
+    .from("google_calendar_tokens")
+    .select("google_email")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const params = await searchParams;
+  const pickFirst = (value: string | string[] | undefined) =>
+    Array.isArray(value) ? value[0] : value;
+  const googleErrorParam = pickFirst(params.googleError);
+  const googleConnected = pickFirst(params.googleConnected) === "1";
+  const googleDisconnected = pickFirst(params.googleDisconnected) === "1";
+
+  const googleStatus = googleErrorParam
+    ? {
+        kind: "error" as const,
+        message:
+          googleErrorMessages[googleErrorParam] ??
+          `Google Calendar error: ${googleErrorParam}`,
+      }
+    : googleConnected
+      ? {
+          kind: "connected" as const,
+          message: "Google Calendar is connected. New events will sync.",
+        }
+      : googleDisconnected
+        ? {
+            kind: "disconnected" as const,
+            message: "Google Calendar is disconnected.",
+          }
+        : null;
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -69,6 +122,13 @@ export default async function SettingsPage() {
       </Card>
 
       <DisplayNameForm initialName={displayName} />
+
+      <GoogleCalendarCard
+        isConnected={Boolean(tokenRow)}
+        googleEmail={tokenRow?.google_email ?? null}
+        status={googleStatus}
+        configured={googleConfigured()}
+      />
     </div>
   );
 }

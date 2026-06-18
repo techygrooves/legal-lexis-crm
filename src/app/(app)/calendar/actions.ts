@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { pushEvent } from "@/lib/google-calendar";
 import type { TablesInsert } from "@/lib/types/database";
 
 export interface MutationResult {
@@ -59,8 +60,24 @@ export async function createEvent(
     notes: null,
   };
 
-  const { error } = await supabase.from("case_events").insert(insert);
-  if (error) return { error: `Could not create event: ${error.message}` };
+  const { data: inserted, error } = await supabase
+    .from("case_events")
+    .insert(insert)
+    .select("*")
+    .single();
+  if (error || !inserted) {
+    return { error: `Could not create event: ${error?.message}` };
+  }
+
+  // Mirror to Google Calendar if the user is connected. Failures here are
+  // logged inside pushEvent and do not surface — the CRM event still saved.
+  const googleEventId = await pushEvent(supabase, user.id, inserted);
+  if (googleEventId) {
+    await supabase
+      .from("case_events")
+      .update({ google_event_id: googleEventId })
+      .eq("id", inserted.id);
+  }
 
   revalidatePath("/calendar");
   revalidatePath("/");
