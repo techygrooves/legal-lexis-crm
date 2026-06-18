@@ -23,6 +23,13 @@ create trigger google_calendar_tokens_set_updated_at
   before update on public.google_calendar_tokens
   for each row execute function public.set_updated_at();
 
+-- Match the rest of the schema: RLS is intentionally OFF for now (every row
+-- already carries user_id and the app's queries scope by user_id explicitly).
+-- Newer Supabase projects auto-enable RLS on new public tables, which would
+-- silently block the upsert from /api/google/calendar/callback until policies
+-- are added — turn it off here to stay consistent with the other tables.
+alter table public.google_calendar_tokens disable row level security;
+
 -- ---------------------------------------------------------------------------
 -- case_events: track the mirrored Google event id
 -- ---------------------------------------------------------------------------
