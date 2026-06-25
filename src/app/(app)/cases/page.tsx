@@ -31,9 +31,11 @@ export default async function CasesPage({
       supabase.from("clients").select("id, full_name").eq("user_id", user.id),
       supabase
         .from("case_events")
-        .select("case_id")
+        .select("case_id, event_date, start_time")
         .eq("user_id", user.id)
-        .gte("event_date", today),
+        .gte("event_date", today)
+        .order("event_date", { ascending: true })
+        .order("start_time", { ascending: true, nullsFirst: false }),
     ]);
 
   if (error) {
@@ -43,9 +45,15 @@ export default async function CasesPage({
   const clientNames = new Map(
     (clients ?? []).map((client) => [client.id, client.full_name])
   );
-  const casesWithUpcoming = new Set(
-    (upcoming ?? []).map((e) => e.case_id).filter(Boolean)
-  );
+
+  // The query is ordered soonest-first, so the first row seen for a case is its
+  // next upcoming event date — keep only that one per case.
+  const nextHearingByCase = new Map<string, string>();
+  for (const event of upcoming ?? []) {
+    if (event.case_id && !nextHearingByCase.has(event.case_id)) {
+      nextHearingByCase.set(event.case_id, event.event_date);
+    }
+  }
 
   const items: CaseListItem[] = (cases ?? []).map((row) => ({
     id: row.id,
@@ -56,9 +64,9 @@ export default async function CasesPage({
     caseNumber: row.case_number ?? "",
     courtName: row.court_name ?? "",
     judgeName: row.judge_name ?? "",
-    filedDate: row.filed_date,
+    nextHearingDate: nextHearingByCase.get(row.id) ?? null,
     status: row.status,
-    hasUpcomingEvent: casesWithUpcoming.has(row.id),
+    hasUpcomingEvent: nextHearingByCase.has(row.id),
   }));
 
   const validStatus =
