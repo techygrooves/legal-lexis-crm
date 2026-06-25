@@ -27,7 +27,7 @@ export interface CaseListItem {
   caseNumber: string;
   courtName: string;
   judgeName: string;
-  filedDate: string | null;
+  nextHearingDate: string | null;
   status: string;
   hasUpcomingEvent: boolean;
 }
@@ -84,10 +84,10 @@ const columns: Column<CaseListItem>[] = [
     className: "text-muted-foreground",
   },
   {
-    header: "Filed",
+    header: "Next Hearing",
     cell: (caseItem) =>
-      caseItem.filedDate
-        ? format(parseISO(caseItem.filedDate), "MMM d, yyyy")
+      caseItem.nextHearingDate
+        ? format(parseISO(caseItem.nextHearingDate), "MMM d, yyyy")
         : "—",
     className: "text-muted-foreground",
   },
