@@ -294,3 +294,127 @@ export async function revokeToken(token: string): Promise<void> {
     // ignored
   }
 }
+
+export interface GoogleListedEvent {
+  id: string;
+  title: string;
+  htmlLink: string;
+  // yyyy-MM-dd in the calendar's timezone.
+  date: string;
+  // HH:MM in the calendar's timezone, or undefined for all-day events.
+  startTime?: string;
+  endTime?: string;
+  location?: string;
+}
+
+interface GoogleEventResource {
+  id?: string;
+  status?: string;
+  summary?: string;
+  htmlLink?: string;
+  location?: string;
+  start?: { date?: string; dateTime?: string; timeZone?: string };
+  end?: { date?: string; dateTime?: string; timeZone?: string };
+}
+
+// Format a UTC Date into yyyy-MM-dd / HH:MM strings as observed from the given
+// IANA timezone. Uses Intl.DateTimeFormat parts to avoid pulling in a tz lib.
+function partsInTimeZone(date: Date, timeZone: string) {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const parts: Record<string, string> = {};
+  for (const part of fmt.formatToParts(date)) {
+    if (part.type !== "literal") parts[part.type] = part.value;
+  }
+  const dateStr = `${parts.year}-${parts.month}-${parts.day}`;
+  // Intl renders midnight as 24:00 in some locales — normalize.
+  const hour = parts.hour === "24" ? "00" : parts.hour;
+  const time = `${hour}:${parts.minute}`;
+  return { date: dateStr, time };
+}
+
+// Lists upcoming events from the user's primary Google Calendar in a window.
+// Returns [] when the user isn't connected or Google errors — callers treat
+// the absence the same as "no Google events to show".
+export async function listEvents(
+  supabase: SupabaseAny,
+  userId: string,
+  rangeStart: Date,
+  rangeEnd: Date
+): Promise<GoogleListedEvent[]> {
+  try {
+    const token = await getValidAccessToken(supabase, userId);
+    if (!token) return [];
+
+    const params = new URLSearchParams({
+      timeMin: rangeStart.toISOString(),
+      timeMax: rangeEnd.toISOString(),
+      singleEvents: "true",
+      orderBy: "startTime",
+      maxResults: "250",
+      // Show events in the calendar's local timezone so the wall-clock matches
+      // what the user sees in Google Calendar.
+      timeZone: token.timezone,
+    });
+    const url = `${CALENDAR_BASE}/calendars/${encodeURIComponent(token.calendarId)}/events?${params.toString()}`;
+
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token.accessToken}` },
+    });
+    if (!res.ok) {
+      console.warn(
+        `Google Calendar list failed (${res.status}): ${await res.text()}`
+      );
+      return [];
+    }
+    const data = (await res.json()) as { items?: GoogleEventResource[] };
+
+    return (data.items ?? [])
+      .filter((item) => item.id && item.status !== "cancelled")
+      .map((item) => {
+        const isAllDay = Boolean(item.start?.date);
+        let date = "";
+        let startTime: string | undefined;
+        let endTime: string | undefined;
+
+        if (isAllDay) {
+          date = item.start!.date!;
+        } else if (item.start?.dateTime) {
+          const start = partsInTimeZone(
+            new Date(item.start.dateTime),
+            token.timezone
+          );
+          date = start.date;
+          startTime = start.time;
+          if (item.end?.dateTime) {
+            const end = partsInTimeZone(
+              new Date(item.end.dateTime),
+              token.timezone
+            );
+            endTime = end.time;
+          }
+        }
+
+        return {
+          id: item.id!,
+          title: item.summary?.trim() || "(no title)",
+          htmlLink: item.htmlLink ?? "",
+          date,
+          startTime,
+          endTime,
+          location: item.location?.trim() || undefined,
+        };
+      })
+      .filter((event) => event.date);
+  } catch (err) {
+    console.warn("Google Calendar list errored:", err);
+    return [];
+  }
+}

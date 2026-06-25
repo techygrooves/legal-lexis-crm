@@ -25,6 +25,11 @@ const eventColors: Record<EventType, string> = {
     "border-violet-300 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-300",
 };
 
+// Distinct neutral styling for events fetched from the user's Google Calendar
+// so they're visually separable from CRM-typed events.
+const googleEventColor =
+  "border-zinc-300 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-200";
+
 const weekDays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
 export function CalendarPreview({
@@ -86,6 +91,49 @@ export function CalendarPreview({
               </span>
               <div className="mt-0.5 space-y-1">
                 {dayEvents.map((event) => {
+                  // Google overlay events render with their title (not a CRM
+                  // type), neutral styling, and open in Google when clicked.
+                  if (event.source === "google") {
+                    const className = cn(
+                      "block rounded border px-1.5 py-0.5 text-[11px] leading-4",
+                      googleEventColor,
+                      "hover:brightness-95"
+                    );
+                    const tooltip = [
+                      event.title,
+                      "From Google Calendar — opens in Google",
+                    ].join(" — ");
+                    const content = (
+                      <span className="block truncate">
+                        {event.startTime && (
+                          <span className="font-medium">
+                            {event.startTime}{" "}
+                          </span>
+                        )}
+                        {event.title}
+                      </span>
+                    );
+                    if (event.htmlLink) {
+                      return (
+                        <a
+                          key={event.id}
+                          href={event.htmlLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={tooltip}
+                          className={className}
+                        >
+                          {content}
+                        </a>
+                      );
+                    }
+                    return (
+                      <div key={event.id} title={tooltip} className={className}>
+                        {content}
+                      </div>
+                    );
+                  }
+
                   const className = cn(
                     "block rounded border px-1.5 py-0.5 text-[11px] leading-4",
                     eventColors[event.type],
