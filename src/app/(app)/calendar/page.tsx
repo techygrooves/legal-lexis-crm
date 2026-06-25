@@ -3,7 +3,11 @@ import { format } from "date-fns";
 
 import type { CalendarEvent, EventType } from "@/lib/mock-data";
 import { createClient } from "@/lib/supabase/server";
-import { CalendarView, type CaseOption } from "./calendar-view";
+import {
+  CalendarView,
+  type CaseOption,
+  type EditableEvent,
+} from "./calendar-view";
 
 function toEventType(dbType: string): EventType {
   const cap = dbType.charAt(0).toUpperCase() + dbType.slice(1).toLowerCase();
@@ -87,12 +91,26 @@ export default async function CalendarPage() {
     title: c.title,
   }));
 
+  // Raw values (HH:MM times, lowercase type, empty strings instead of null) so
+  // the edit dialog can pre-fill its form fields directly.
+  const editableEvents: EditableEvent[] = (events ?? []).map((row) => ({
+    id: row.id,
+    title: row.title,
+    eventType: row.event_type,
+    eventDate: row.event_date,
+    startTime: row.start_time ? row.start_time.slice(0, 5) : "",
+    endTime: row.end_time ? row.end_time.slice(0, 5) : "",
+    location: row.location ?? "",
+    caseId: row.case_id ?? "",
+  }));
+
   const today = format(new Date(), "yyyy-MM-dd");
   const initialMonth = `${today.slice(0, 7)}-01`;
 
   return (
     <CalendarView
       events={calendarEvents}
+      editableEvents={editableEvents}
       cases={caseOptions}
       initialMonth={initialMonth}
       today={today}
