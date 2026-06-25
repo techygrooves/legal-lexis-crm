@@ -376,6 +376,15 @@ export function CalendarView({
 
       <p className="text-sm text-muted-foreground">
         Click any event to edit or delete it.
+        {events.some((e) => e.source === "google") && (
+          <>
+            {" "}
+            <span className="text-muted-foreground/80">
+              Grey events come from your Google Calendar — click to open them
+              in Google.
+            </span>
+          </>
+        )}
       </p>
 
       <CalendarPreview

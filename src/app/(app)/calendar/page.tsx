@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { format } from "date-fns";
 
+import { listEvents } from "@/lib/google-calendar";
 import type { CalendarEvent, EventType } from "@/lib/mock-data";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -42,7 +43,7 @@ export default async function CalendarPage() {
       supabase
         .from("case_events")
         .select(
-          "id, title, event_type, event_date, start_time, end_time, location, case_id, client_id"
+          "id, title, event_type, event_date, start_time, end_time, location, case_id, client_id, google_event_id"
         )
         .eq("user_id", user.id)
         .order("event_date", { ascending: true }),
@@ -103,6 +104,47 @@ export default async function CalendarPage() {
     location: row.location ?? "",
     caseId: row.case_id ?? "",
   }));
+
+  // Read-only overlay of the user's own Google Calendar events. Sync remains
+  // one-way at the data level (Supabase is the source of truth); Google events
+  // are displayed but not stored, and clicking one opens it in Google.
+  const now = new Date();
+  const sixtyDays = 60 * 24 * 60 * 60 * 1000;
+  const googleEvents = await listEvents(
+    supabase,
+    user.id,
+    new Date(now.getTime() - sixtyDays),
+    new Date(now.getTime() + sixtyDays)
+  );
+  // Don't show CRM-pushed events twice — every case_event row with a
+  // google_event_id is the same event Google would return for it.
+  const mirroredGoogleIds = new Set(
+    (events ?? [])
+      .map((row) => row.google_event_id)
+      .filter((id): id is string => Boolean(id))
+  );
+  for (const event of googleEvents) {
+    if (mirroredGoogleIds.has(event.id)) continue;
+    calendarEvents.push({
+      id: `google:${event.id}`,
+      title: event.title,
+      date: event.date,
+      startTime: event.startTime
+        ? formatTime(event.startTime) ?? event.startTime
+        : undefined,
+      endTime: event.endTime
+        ? formatTime(event.endTime) ?? event.endTime
+        : undefined,
+      // Google events aren't typed in the CRM's color scheme; mark them as
+      // Meeting so the type union stays valid, but the renderer keys off
+      // `source` for styling, not `type`.
+      type: "Meeting",
+      location: event.location,
+      caseId: null,
+      source: "google",
+      htmlLink: event.htmlLink,
+    });
+  }
 
   const today = format(new Date(), "yyyy-MM-dd");
   const initialMonth = `${today.slice(0, 7)}-01`;

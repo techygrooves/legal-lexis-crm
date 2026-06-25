@@ -43,6 +43,10 @@ export interface CalendarEvent {
   // may have no case number, or no client assigned yet).
   caseNumber?: string;
   clientName?: string;
+  // Set on events fetched from the user's Google Calendar (read-only overlay).
+  // htmlLink is the deep-link back to Google for editing.
+  source?: "google";
+  htmlLink?: string;
 }
 
 export interface Task {
