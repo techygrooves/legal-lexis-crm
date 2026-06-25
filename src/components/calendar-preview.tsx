@@ -31,10 +31,14 @@ export function CalendarPreview({
   month,
   events,
   today,
+  onEventClick,
 }: {
   month: Date;
   events: CalendarEvent[];
   today?: Date;
+  // When provided, event chips become buttons that call this with the event
+  // id (used to open the edit dialog) instead of linking to the case.
+  onEventClick?: (id: string) => void;
 }) {
   const gridStart = startOfWeek(startOfMonth(month));
   const gridEnd = endOfWeek(endOfMonth(month));
@@ -85,18 +89,19 @@ export function CalendarPreview({
                   const className = cn(
                     "block rounded border px-1.5 py-0.5 text-[11px] leading-4",
                     eventColors[event.type],
-                    event.caseId && "hover:brightness-95"
+                    (event.caseId || onEventClick) && "hover:brightness-95"
                   );
                   // Case number and client name are only meaningful when the
                   // event is tied to a case, and either can be empty.
                   const caseDetails = event.caseId
                     ? [event.caseNumber, event.clientName].filter(Boolean)
                     : [];
-                  const tooltip = [
-                    event.title,
-                    ...caseDetails,
-                    event.caseId ? "open case" : null,
-                  ]
+                  const hint = onEventClick
+                    ? "click to edit"
+                    : event.caseId
+                      ? "open case"
+                      : null;
+                  const tooltip = [event.title, ...caseDetails, hint]
                     .filter(Boolean)
                     .join(" — ");
                   const content = (
@@ -119,6 +124,19 @@ export function CalendarPreview({
                       ))}
                     </>
                   );
+                  if (onEventClick) {
+                    return (
+                      <button
+                        key={event.id}
+                        type="button"
+                        onClick={() => onEventClick(event.id)}
+                        title={tooltip}
+                        className={cn(className, "w-full cursor-pointer text-left")}
+                      >
+                        {content}
+                      </button>
+                    );
+                  }
                   return event.caseId ? (
                     <Link
                       key={event.id}
